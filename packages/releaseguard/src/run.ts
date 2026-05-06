@@ -51,6 +51,42 @@ export async function runReleaseGuard(
     fixture: options.fixture,
   });
 
+  if (scope.docsOnly) {
+    const graph = createEmptyRunGraph(rootDir);
+    const impact = emptyImpact();
+    const evidencePlan = emptyEvidencePlan();
+    const executionResult = await writeEmptyExecutionResult(artifactDir);
+    const decision = decide({
+      graph,
+      evidencePlan,
+      executionResult,
+      docsOnly: true,
+    });
+    const reportPath = path.join(artifactDir, "report.md");
+    await fs.writeFile(
+      reportPath,
+      renderMarkdownReport({
+        graph,
+        scope,
+        impact,
+        evidencePlan,
+        executionResult,
+        decision,
+        artifactDir,
+      }),
+    );
+
+    return {
+      decision,
+      reportPath,
+      artifactDir,
+      graph,
+      impact,
+      evidencePlan,
+      executionResult,
+    };
+  }
+
   let preScanFixtureRestore: { restore(): Promise<void> } | undefined;
   try {
     if (scope.mode === "fixture" && scope.fixture === "demo-missing-evidence") {
@@ -141,4 +177,47 @@ function createRunId(): string {
     .toISOString()
     .replace(/[-:]/g, "")
     .replace(/\.\d+Z$/, "Z");
+}
+
+function createEmptyRunGraph(rootDir: string): CapabilityGraph {
+  return {
+    version: "releaseguard-v0.1",
+    rootDir,
+    generatedAt: new Date().toISOString(),
+    nodes: {},
+    edges: {},
+  };
+}
+
+function emptyImpact(): ChangeImpactAgentOutput {
+  return {
+    affected_capability_ids: [],
+    rationale_per_capability: {},
+    citations: [],
+    unresolved_items: [],
+  };
+}
+
+function emptyEvidencePlan(): EvidencePlan {
+  return {
+    requirements: [],
+    selectedEvidence: [],
+    missingEvidence: [],
+  };
+}
+
+async function writeEmptyExecutionResult(
+  artifactDir: string,
+): Promise<EvidenceExecutionResult> {
+  const artifactPath = path.join(artifactDir, "evidence_result.json");
+  const testResultsPath = path.join(artifactDir, "test_results.json");
+  const executionResult: EvidenceExecutionResult = {
+    results: [],
+    artifactPath,
+    testResultsPath,
+  };
+  const payload = { results: [] };
+  await fs.writeFile(artifactPath, `${JSON.stringify(payload, null, 2)}\n`);
+  await fs.writeFile(testResultsPath, `${JSON.stringify(payload, null, 2)}\n`);
+  return executionResult;
 }

@@ -98,6 +98,8 @@ function usage(): string {
     "Usage:",
     "  releaseguard run --base <base> --head <head>",
     "  releaseguard run --fixture demo-discount-regression",
+    "  releaseguard run --fixture demo-missing-evidence",
+    "  releaseguard run --fixture demo-docs-only",
   ].join("\n");
 }
 

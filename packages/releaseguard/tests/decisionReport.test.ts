@@ -84,6 +84,38 @@ describe("decision engine and markdown report", () => {
     });
   });
 
+  it("returns PASS for docs-only changes", async () => {
+    const { graph } = await scanRepository(repoRoot);
+    const executionResult: EvidenceExecutionResult = {
+      results: [],
+      artifactPath: path.join(
+        repoRoot,
+        "artifacts/releaseguard/test/evidence_result.json",
+      ),
+      testResultsPath: path.join(
+        repoRoot,
+        "artifacts/releaseguard/test/test_results.json",
+      ),
+    };
+
+    expect(
+      decide({
+        graph,
+        evidencePlan: {
+          requirements: [],
+          selectedEvidence: [],
+          missingEvidence: [],
+        },
+        executionResult,
+        docsOnly: true,
+      }),
+    ).toEqual({
+      decision: "PASS",
+      reason: "low-risk docs-only change.",
+    });
+  });
+
+
 
   it("renders the BLOCK report golden output", async () => {
     const { graph, result } = await scanRepository(repoRoot);

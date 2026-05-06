@@ -14,6 +14,9 @@ npm run releaseguard -- run --fixture demo-discount-regression
 
 npm run releaseguard -- run --fixture demo-missing-evidence
 # Decision: WARN
+
+npm run releaseguard -- run --fixture demo-docs-only
+# Decision: PASS
 ```
 
 `demo-discount-regression` expected output:
@@ -36,6 +39,16 @@ Report: artifacts/releaseguard/<run_id>/report.md
 
 That fixture simulates a high-risk discount API change where only valid-discount evidence exists. ReleaseGuard still identifies `api_apply_discount` and `route_checkout`, but it cannot find required `invalid_discount` evidence, so it warns instead of pretending the change is covered.
 
+`demo-docs-only` expected output:
+
+```text
+Decision: PASS
+Reason: low-risk docs-only change.
+Report: artifacts/releaseguard/<run_id>/report.md
+```
+
+That fixture simulates a README-only change. ReleaseGuard classifies the scope before scanning, fast-skips capability/evidence/test work, and writes a PASS report.
+
 ## v0.1 support
 
 ReleaseGuard v0.1 is a narrow vertical slice for the demo app only.
@@ -52,7 +65,7 @@ It supports:
 - Selected test execution.
 - Deterministic `PASS` / `WARN` / `BLOCK` decisions.
 - Markdown reports under `artifacts/releaseguard/<run_id>/report.md`.
-- Fixture demos for `BLOCK` and `WARN`.
+- Fixture demos for `BLOCK`, `WARN`, and `PASS`.
 
 It does not support:
 
@@ -119,6 +132,22 @@ Report: artifacts/releaseguard/<run_id>/report.md
 ```
 
 The fixture temporarily scans a valid-only discount API test file. No selected test satisfies the required `invalid_discount`, `400`, and `error_status` evidence, so the deterministic decision engine returns `WARN`.
+
+Run the docs-only fixture:
+
+```bash
+npm run releaseguard -- run --fixture demo-docs-only
+```
+
+Expected output:
+
+```text
+Decision: PASS
+Reason: low-risk docs-only change.
+Report: artifacts/releaseguard/<run_id>/report.md
+```
+
+The fixture simulates a docs-only change and fast-skips scanner, impact, evidence planning, and test execution.
 
 Scanner artifacts are written to:
 

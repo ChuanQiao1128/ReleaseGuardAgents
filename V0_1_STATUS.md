@@ -188,3 +188,31 @@ Issues:
 
 Next:
 - Commit, tag `releaseguard-v0.1.2`, and push the branch/tag.
+
+## v0.1.3 Docs-only Fast Skip Demo
+
+Status: Done
+
+Done:
+- Fast-forward merged `v0.1.2-missing-evidence` into `main` and pushed `main`.
+- Created branch `v0.1.3-docs-only`.
+- Added `ScopeAnalyzer` classification for `docs_only`, `source_or_test_change`, `config_or_dependency_change`, and `unknown`.
+- Added `demo-docs-only` fixture support.
+- Docs-only changes are fast-skipped before scanner, impact agent, evidence planner, and selected test execution.
+- Decision Engine returns `PASS` with reason `low-risk docs-only change.`
+- Added tests for docs-only scope classification, package/config non-docs classification, source non-docs classification, docs-only fixture PASS, and docs-only decision path.
+- Updated README first screen with BLOCK, WARN, and PASS fixture commands.
+
+Tests run:
+- `npm run test --workspace releaseguard`
+- `npm run test --workspace releaseguard && npm run build --workspace releaseguard && npm test && npm run build --workspace @releaseguard/demo-app && npm run releaseguard -- run --fixture demo-discount-regression && npm run releaseguard -- run --fixture demo-missing-evidence && npm run releaseguard -- run --fixture demo-docs-only && npm run test --workspace @releaseguard/demo-app` initially failed at `npm run build --workspace releaseguard` due to a fixture union type narrowing issue in `diffParser.ts`; fixed by returning the docs-only fixture branch explicitly.
+- `npm run test --workspace releaseguard && npm run build --workspace releaseguard && npm test && npm run build --workspace @releaseguard/demo-app && npm run releaseguard -- run --fixture demo-discount-regression && npm run releaseguard -- run --fixture demo-missing-evidence && npm run releaseguard -- run --fixture demo-docs-only && npm run test --workspace @releaseguard/demo-app`
+
+Issues:
+- None currently.
+- Latest BLOCK fixture report: `artifacts/releaseguard/20260506T124230Z/report.md`.
+- Latest WARN fixture report: `artifacts/releaseguard/20260506T124231Z/report.md`.
+- Latest PASS fixture report: `artifacts/releaseguard/20260506T124232Z/report.md`.
+
+Next:
+- Commit, tag `releaseguard-v0.1.3`, and push the branch/tag.

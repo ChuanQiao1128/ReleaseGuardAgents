@@ -13,8 +13,8 @@ export function renderMarkdownReport(input: {
   evidencePlan: EvidencePlan;
   executionResult: EvidenceExecutionResult;
   decision: DecisionResult;
-  graphPath: string;
-  coveragePath: string;
+  graphPath?: string;
+  coveragePath?: string;
   artifactDir: string;
 }): string {
   const rel = (filePath: string) =>
@@ -64,8 +64,7 @@ export function renderMarkdownReport(input: {
     `- ${input.decision.reason}`,
     "",
     "## Scanner coverage",
-    `- Capability graph: ${rel(input.graphPath)}`,
-    `- Coverage report: ${rel(input.coveragePath)}`,
+    ...scannerCoverageLines(input.graphPath, input.coveragePath, rel),
     "",
     "## Artifacts",
     `- Report directory: ${rel(input.artifactDir)}`,
@@ -85,3 +84,17 @@ function listOrNone(items: string[]): string[] {
   return items.length > 0 ? items : ["- None"];
 }
 
+function scannerCoverageLines(
+  graphPath: string | undefined,
+  coveragePath: string | undefined,
+  rel: (filePath: string) => string,
+): string[] {
+  if (!graphPath || !coveragePath) {
+    return ["- Skipped for low-risk docs-only change."];
+  }
+
+  return [
+    `- Capability graph: ${rel(graphPath)}`,
+    `- Coverage report: ${rel(coveragePath)}`,
+  ];
+}

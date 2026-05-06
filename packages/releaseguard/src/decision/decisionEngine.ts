@@ -52,7 +52,7 @@ export function decide(input: {
   if (input.docsOnly) {
     return {
       decision: "PASS",
-      reason: "docs-only change.",
+      reason: "low-risk docs-only change.",
     };
   }
 

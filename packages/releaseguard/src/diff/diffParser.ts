@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { analyzeScope, ScopeAnalysis } from "./scopeAnalyzer";
 
 const execFileAsync = promisify(execFile);
 
@@ -8,13 +9,22 @@ export type ChangeScope =
       mode: "fixture";
       fixture: "demo-discount-regression" | "demo-missing-evidence";
       changedFiles: string[];
+      scope: ScopeAnalysis;
       docsOnly: false;
+    }
+  | {
+      mode: "fixture";
+      fixture: "demo-docs-only";
+      changedFiles: string[];
+      scope: ScopeAnalysis;
+      docsOnly: true;
     }
   | {
       mode: "git";
       base: string;
       head: string;
       changedFiles: string[];
+      scope: ScopeAnalysis;
       docsOnly: boolean;
     };
 
@@ -27,14 +37,31 @@ export async function resolveChangeScope(args: {
   if (args.fixture) {
     if (
       args.fixture !== "demo-discount-regression" &&
-      args.fixture !== "demo-missing-evidence"
+      args.fixture !== "demo-missing-evidence" &&
+      args.fixture !== "demo-docs-only"
     ) {
       throw new Error(`Unknown fixture: ${args.fixture}`);
     }
+    const changedFiles =
+      args.fixture === "demo-docs-only"
+        ? ["README.md"]
+        : ["apps/demo-app/src/app/api/discount/apply/route.ts"];
+    const scope = analyzeScope(changedFiles);
+    if (args.fixture === "demo-docs-only") {
+      return {
+        mode: "fixture",
+        fixture: "demo-docs-only",
+        changedFiles,
+        scope,
+        docsOnly: true,
+      };
+    }
+
     return {
       mode: "fixture",
       fixture: args.fixture,
-      changedFiles: ["apps/demo-app/src/app/api/discount/apply/route.ts"],
+      changedFiles,
+      scope,
       docsOnly: false,
     };
   }
@@ -53,19 +80,13 @@ export async function resolveChangeScope(args: {
     .map((line) => line.trim())
     .filter(Boolean);
 
+  const scope = analyzeScope(changedFiles);
   return {
     mode: "git",
     base: args.base,
     head: args.head,
     changedFiles,
-    docsOnly: changedFiles.length > 0 && changedFiles.every(isDocsOnlyPath),
+    scope,
+    docsOnly: scope.classification === "docs_only",
   };
-}
-
-export function isDocsOnlyPath(filePath: string): boolean {
-  return (
-    filePath === "README.md" ||
-    filePath.endsWith(".md") ||
-    filePath.startsWith("docs/")
-  );
 }

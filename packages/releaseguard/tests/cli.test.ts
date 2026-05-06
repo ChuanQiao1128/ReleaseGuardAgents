@@ -19,10 +19,16 @@ describe("parseCliArgs", () => {
     });
   });
 
+  it("parses docs-only fixture run arguments", () => {
+    expect(parseCliArgs(["run", "--fixture", "demo-docs-only"])).toEqual({
+      command: "run",
+      fixture: "demo-docs-only",
+    });
+  });
+
   it("rejects run without diff or fixture arguments", () => {
     expect(() => parseCliArgs(["run"])).toThrow(
       "run requires --base/--head or --fixture.",
     );
   });
 });
-
