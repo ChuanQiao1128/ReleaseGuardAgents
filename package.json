@@ -1,0 +1,13 @@
+{
+  "name": "releaseguard",
+  "private": true,
+  "workspaces": [
+    "apps/demo-app",
+    "packages/releaseguard"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "releaseguard": "npm run cli --workspace releaseguard --",
+    "test": "npm run test --workspaces"
+  }
+}

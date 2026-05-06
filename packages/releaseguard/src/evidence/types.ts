@@ -1,0 +1,35 @@
+import { TestCaseTag } from "../graph/types";
+
+export type EvidenceRequirementType = "existing_test" | "missing_evidence";
+export type CoverageDepth = "direct" | "transitive";
+
+export type EvidenceRequirement = {
+  id: string;
+  type: EvidenceRequirementType;
+  capabilityId: string;
+  requiredTags: TestCaseTag[];
+  description: string;
+};
+
+export type SelectedEvidence = {
+  requirementId: string;
+  capabilityId: string;
+  testId: string;
+  testFile: string;
+  coverageDepth: CoverageDepth;
+  caseTags: TestCaseTag[];
+};
+
+export type MissingEvidence = {
+  requirementId: string;
+  capabilityId: string;
+  reason: string;
+  requiredTags: TestCaseTag[];
+};
+
+export type EvidencePlan = {
+  requirements: EvidenceRequirement[];
+  selectedEvidence: SelectedEvidence[];
+  missingEvidence: MissingEvidence[];
+};
+

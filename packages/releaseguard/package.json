@@ -1,0 +1,22 @@
+{
+  "name": "releaseguard",
+  "private": true,
+  "version": "0.1.0",
+  "bin": {
+    "releaseguard": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "cli": "tsx src/cli.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "24.0.0",
+    "tsx": "4.20.6",
+    "typescript": "5.8.3",
+    "vitest": "3.2.4"
+  }
+}

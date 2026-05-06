@@ -1,0 +1,64 @@
+import { EvidenceExecutionResult } from "../executor/selectedTestExecutor";
+import { EvidencePlan } from "../evidence/types";
+import { getNodeRisk } from "../graph/capabilityGraph";
+import { CapabilityGraph } from "../graph/types";
+
+export type Decision = "PASS" | "WARN" | "BLOCK";
+
+export type DecisionResult = {
+  decision: Decision;
+  reason: string;
+};
+
+export function decide(input: {
+  graph: CapabilityGraph;
+  evidencePlan: EvidencePlan;
+  executionResult: EvidenceExecutionResult;
+  infrastructureFailed?: boolean;
+  docsOnly?: boolean;
+}): DecisionResult {
+  if (
+    input.executionResult.results.some((result) => result.outcome === "failed")
+  ) {
+    return {
+      decision: "BLOCK",
+      reason: "selected high-priority evidence failed.",
+    };
+  }
+
+  if (
+    input.evidencePlan.missingEvidence.some(
+      (missing) => getNodeRisk(input.graph, missing.capabilityId) === "high",
+    )
+  ) {
+    return {
+      decision: "WARN",
+      reason: "high-risk capability is missing required evidence.",
+    };
+  }
+
+  if (
+    input.infrastructureFailed ||
+    input.executionResult.results.some(
+      (result) => result.outcome === "inconclusive",
+    )
+  ) {
+    return {
+      decision: "WARN",
+      reason: "ReleaseGuard infrastructure or selected test execution was inconclusive.",
+    };
+  }
+
+  if (input.docsOnly) {
+    return {
+      decision: "PASS",
+      reason: "docs-only change.",
+    };
+  }
+
+  return {
+    decision: "PASS",
+    reason: "required selected evidence passed.",
+  };
+}
+
