@@ -319,3 +319,56 @@ Next milestone:
 - v0.3 can use trusted RAG context to inform evidence priority, but only with
   deterministic safeguards and without giving RAG authority over merge
   decisions.
+
+## v0.2.1 RAG Hardening and Presentation Polish
+
+Status: Done
+
+Done:
+- Added dataset summary and query-type counts to
+  `.releaseguard/reports/rag_benchmark_v0_2.md`.
+- Added a clearer retriever comparison table with Recall@5, MRR, no-answer false
+  positive rate, answerable query count, and no-answer query count.
+- Added benchmark interpretation for BM25, deterministic local embeddings, and
+  RRF hybrid ranking.
+- Added explicit limitation text that this is a small demo-corpus benchmark, not
+  a production retrieval benchmark.
+- Updated README with current benchmark summary, deterministic local embedding
+  fallback, and the discount/checkout RAG demo storyline.
+
+Tests run:
+- `npm run test --workspace releaseguard`
+- `npm run build --workspace releaseguard`
+- `npm run releaseguard -- memory index`
+- `npm run releaseguard -- memory benchmark`
+- `npm run releaseguard -- memory demo-discount-context`
+- `npm test`
+- `npm run build --workspace @releaseguard/demo-app`
+- `npm run releaseguard:selfcheck`
+- `npm run test --workspace @releaseguard/demo-app`
+
+Benchmark output:
+- Chunks: 46
+- Queries: 14
+- Query type counts:
+  - direct: 10
+  - paraphrase: 2
+  - near_miss: 1
+  - no_answer: 1
+- BM25: Recall@5 `0.923`, MRR `0.346`, no-answer false positive rate `0.000`
+- Embedding: Recall@5 `0.692`, MRR `0.310`, no-answer false positive rate `1.000`
+- RRF hybrid: Recall@5 `0.923`, MRR `0.390`, no-answer false positive rate `1.000`
+
+Demo output:
+- `npm run releaseguard -- memory demo-discount-context`
+- Retrieved chunks: 7
+- Report: `.releaseguard/reports/rag_demo_discount_context.md`
+
+Limitations:
+- v0.2.1 does not add v0.3 RAG-informed evidence planning.
+- RAG remains report-only and does not affect Evidence Planner or
+  PASS/WARN/BLOCK decisions.
+
+Next:
+- v0.3 may use trusted RAG context to raise evidence priority, but v0.2.1 stops
+  before any RAG-informed evidence planning or merge decision changes.

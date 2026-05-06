@@ -5,6 +5,7 @@ import { retrieveWithEmbeddings } from "./embeddingRetriever";
 import {
   RagEvalItem,
   RagEvalDatasetResult,
+  RagEvalQueryType,
   writeRagEvalDataset,
 } from "./evalDataset";
 import { writeRepoMemoryIndex } from "./memoryIndex";
@@ -31,6 +32,7 @@ export type RetrieverBenchmarkResult = {
 export type RagBenchmarkRun = {
   index_chunk_count: number;
   dataset_item_count: number;
+  query_type_counts: Record<RagEvalQueryType, number>;
   generated_dataset_path: string;
   markdown_report_path: string;
   json_report_path: string;
@@ -70,6 +72,7 @@ export async function runRagBenchmark(
   const report: RagBenchmarkRun = {
     index_chunk_count: index.chunks.length,
     dataset_item_count: dataset.items.length,
+    query_type_counts: queryTypeCounts(dataset.items),
     generated_dataset_path: dataset.outputPath,
     markdown_report_path: markdownReportPath,
     json_report_path: jsonReportPath,
@@ -245,6 +248,7 @@ function benchmarkLimitations(
   chunks: RepoMemoryChunk[],
 ): string[] {
   const limitations = [
+    "This is a small demo-corpus benchmark, not a production retrieval benchmark.",
     "v0.2 benchmark uses deterministic local template queries, not a reviewed production eval set.",
     "Embedding baseline defaults to deterministic local token hashing unless an external provider is explicitly configured later.",
     "RAG retrieval is report context only in v0.2 and does not change PASS/WARN/BLOCK decisions.",
@@ -263,16 +267,35 @@ function renderBenchmarkMarkdown(report: RagBenchmarkRun, rootDir: string): stri
   return [
     "# ReleaseGuard Repo Memory RAG Benchmark v0.2",
     "",
+    "## Dataset",
+    "",
     `Chunks indexed: ${report.index_chunk_count}`,
-    `Eval items: ${report.dataset_item_count}`,
+    `Queries: ${report.dataset_item_count}`,
     `Dataset: ${rel(report.generated_dataset_path)}`,
     "",
-    "| Retriever | Recall@5 | MRR | No-answer false positive rate |",
-    "|---|---:|---:|---:|",
+    "| Query type | Count |",
+    "|---|---:|",
+    `| direct | ${report.query_type_counts.direct} |`,
+    `| paraphrase | ${report.query_type_counts.paraphrase} |`,
+    `| near_miss | ${report.query_type_counts.near_miss} |`,
+    `| no_answer | ${report.query_type_counts.no_answer} |`,
+    "",
+    "## Retriever Comparison",
+    "",
+    "| Retriever | Recall@5 | MRR | No-answer false positive rate | Answerable queries | No-answer queries |",
+    "|---|---:|---:|---:|---:|---:|",
     ...report.results.map(
       (result) =>
-        `| ${result.retriever} | ${formatMetric(result.metrics.recall_at_5)} | ${formatMetric(result.metrics.mrr)} | ${formatMetric(result.metrics.no_answer_false_positive_rate)} |`,
+        `| ${result.retriever} | ${formatMetric(result.metrics.recall_at_5)} | ${formatMetric(result.metrics.mrr)} | ${formatMetric(result.metrics.no_answer_false_positive_rate)} | ${result.metrics.answerable_query_count} | ${result.metrics.no_answer_query_count} |`,
     ),
+    "",
+    "## Interpretation",
+    "",
+    "BM25 is strong in this repo-memory corpus because many relevant documents contain exact domain terms such as discount, checkout, ADR, incident, and API names.",
+    "",
+    "The deterministic embedding baseline is local and CI-safe. It validates retrieval plumbing and evaluation without external API keys, but it is not a claim that token hashing matches production-grade semantic embeddings.",
+    "",
+    "RRF hybrid retrieval does not assume embedding-only retrieval is superior. It uses reciprocal ranks from BM25 and embedding results and can improve ordering quality even when Recall@5 is unchanged.",
     "",
     "## Citation Validation Eval",
     "",
@@ -288,6 +311,17 @@ function renderBenchmarkMarkdown(report: RagBenchmarkRun, rootDir: string): stri
     ...report.limitations.map((limitation) => `- ${limitation}`),
     "",
   ].join("\n");
+}
+
+function queryTypeCounts(
+  items: RagEvalItem[],
+): Record<RagEvalQueryType, number> {
+  return {
+    direct: items.filter((item) => item.query_type === "direct").length,
+    paraphrase: items.filter((item) => item.query_type === "paraphrase").length,
+    near_miss: items.filter((item) => item.query_type === "near_miss").length,
+    no_answer: items.filter((item) => item.query_type === "no_answer").length,
+  };
 }
 
 function formatMetric(value: number): string {

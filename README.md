@@ -149,6 +149,26 @@ This writes:
 .releaseguard/reports/rag_benchmark_v0_2.json
 ```
 
+Current demo-corpus benchmark:
+
+```text
+Memory chunks: 46
+BM25: Recall@5=0.923, MRR=0.346
+Embedding: Recall@5=0.692, MRR=0.310
+RRF hybrid: Recall@5=0.923, MRR=0.390
+```
+
+BM25 is strong in this repo-memory corpus because many relevant documents
+contain exact domain terms such as `discount`, `checkout`, `ADR`, `incident`,
+and API names. The RRF hybrid retriever improves ranking quality through higher
+MRR, but v0.2 does not claim embedding-only retrieval is superior.
+
+The default embedding provider is deterministic and local so the benchmark can
+run in CI without external API keys. It is useful for testing retrieval
+plumbing and evaluation, not a claim that local token hashing matches
+production-grade semantic embeddings. A production embedding provider can be
+added later behind an explicit configuration boundary.
+
 Generate the discount/checkout repo-memory demo report:
 
 ```bash
@@ -160,6 +180,11 @@ This writes:
 ```text
 .releaseguard/reports/rag_demo_discount_context.md
 ```
+
+The demo retrieves the checkout critical ADR and the historical discount crash
+incident from a noisy repo-memory corpus. v0.2 only reports this context; v0.3
+may use trusted historical context to raise evidence priority, with safeguards
+that prevent RAG from lowering requirements or deciding merge status.
 
 v0.2 supports deterministic local repo-memory retrieval:
 

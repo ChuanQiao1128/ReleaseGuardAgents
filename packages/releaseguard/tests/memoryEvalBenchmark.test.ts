@@ -48,6 +48,10 @@ describe("Repo Memory eval, benchmark, and demo reports", () => {
       "embedding",
       "rrf_hybrid",
     ]);
+    expect(result.query_type_counts.direct).toBeGreaterThan(0);
+    expect(result.query_type_counts.paraphrase).toBeGreaterThan(0);
+    expect(result.query_type_counts.near_miss).toBeGreaterThan(0);
+    expect(result.query_type_counts.no_answer).toBeGreaterThan(0);
     for (const entry of result.results) {
       expect(entry.metrics).toHaveProperty("recall_at_5");
       expect(entry.metrics).toHaveProperty("mrr");
@@ -62,8 +66,18 @@ describe("Repo Memory eval, benchmark, and demo reports", () => {
 
     const markdown = await fs.readFile(result.markdown_report_path, "utf8");
     expect(markdown).toContain("ReleaseGuard Repo Memory RAG Benchmark v0.2");
+    expect(markdown).toContain("## Dataset");
+    expect(markdown).toContain("| Query type | Count |");
+    expect(markdown).toContain("## Retriever Comparison");
+    expect(markdown).toContain("No-answer false positive rate");
+    expect(markdown).toContain("## Interpretation");
+    expect(markdown).toContain("BM25 is strong in this repo-memory corpus");
+    expect(markdown).toContain("deterministic embedding baseline is local");
     expect(markdown).toContain("Citation Validation Eval");
     expect(markdown).toContain("Limitations");
+    expect(markdown).toContain(
+      "small demo-corpus benchmark, not a production retrieval benchmark",
+    );
     await expect(fs.stat(result.json_report_path)).resolves.toBeDefined();
   });
 
