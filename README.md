@@ -290,6 +290,8 @@ The workflow:
 
 Real diff preview is intentionally non-blocking in v0.1.7. A real diff `BLOCK` or `WARN` is reported in the summary and artifacts, but it does not fail the workflow yet. If the preview command has an infrastructure error, the workflow captures the exit code and logs it in the summary instead of silently ignoring it.
 
+ReleaseGuard Actions preview verified with a docs-only pull request.
+
 A later milestone can map real diff decisions to check conclusions, for example `BLOCK` as failure and `WARN` as neutral.
 
 ## Security note
