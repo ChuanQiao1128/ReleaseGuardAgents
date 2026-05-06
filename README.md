@@ -92,7 +92,7 @@ It supports:
 - Markdown reports under `artifacts/releaseguard/<run_id>/report.md`.
 - Fixture demos for `BLOCK`, `WARN`, and `PASS`.
 - Real git diff mode using changed file paths from `git diff`.
-- GitHub Actions fixture self-checks.
+- GitHub Actions fixture self-checks and non-blocking real diff preview.
 
 It does not support:
 
@@ -204,7 +204,7 @@ Expected v0.1.5 behavior:
 - `apps/demo-app/src/app/api/discount/apply/route.ts` maps to `api_apply_discount`, traverses to `route_checkout`, and selects `tests/api/discount.test.ts`.
 - unmapped source changes return `WARN` with `source change could not be mapped to known capability.`
 
-Real diff mode requires a git repository and valid refs. If git is unavailable or refs are invalid, use the fixture commands for the demo path. GitHub Actions still runs fixture self-checks first; real PR workflow enforcement is not part of v0.1.6.
+Real diff mode requires a git repository and valid refs. If git is unavailable or refs are invalid, use the fixture commands for the demo path. GitHub Actions still runs fixture self-checks first; real PR workflow enforcement is not part of v0.1.7.
 
 ## Real Diff Demo
 
@@ -260,11 +260,37 @@ If ReleaseGuard sees a source file change that cannot be mapped to a known capab
 
 ## Run In CI
 
-ReleaseGuard v0.1.4 includes a minimal GitHub Actions self-check workflow at `.github/workflows/releaseguard.yml`.
+ReleaseGuard includes a GitHub Actions workflow at `.github/workflows/releaseguard.yml`.
 
 The workflow runs on `pull_request` and `workflow_dispatch`. It installs dependencies, builds and tests the workspace, runs all three fixture checks, uploads `artifacts/releaseguard`, and writes a job summary.
 
-This is a fixture self-check, not the real PR diff gate yet. A later milestone will add real PR diff mode or GitHub check integration.
+Fixture self-check is the required CI validation:
+
+```bash
+npm run releaseguard:selfcheck
+```
+
+On pull requests, the workflow also runs real diff preview:
+
+```bash
+npm run releaseguard -- run --base <base_sha> --head <head_sha>
+```
+
+## GitHub Actions Real Diff Preview
+
+v0.1.7 adds a non-blocking real diff preview to the pull request workflow.
+
+The workflow:
+
+- checks out the repository with `fetch-depth: 0`,
+- runs the fixture self-check as the required validation,
+- runs real diff preview with `github.event.pull_request.base.sha` and `github.event.pull_request.head.sha`,
+- uploads `artifacts/releaseguard`,
+- writes the fixture self-check result, real diff decision, reason, report path, and preview note to the GitHub Step Summary.
+
+Real diff preview is intentionally non-blocking in v0.1.7. A real diff `BLOCK` or `WARN` is reported in the summary and artifacts, but it does not fail the workflow yet. If the preview command has an infrastructure error, the workflow captures the exit code and logs it in the summary instead of silently ignoring it.
+
+A later milestone can map real diff decisions to check conclusions, for example `BLOCK` as failure and `WARN` as neutral.
 
 ## Security note
 

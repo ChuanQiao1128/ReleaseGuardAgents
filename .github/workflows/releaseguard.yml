@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -35,22 +37,81 @@ jobs:
         run: npm run build --workspace @releaseguard/demo-app
 
       - name: Run ReleaseGuard fixture self-check
+        id: fixture_self_check
         run: npm run releaseguard:selfcheck
+
+      - name: Run ReleaseGuard real diff preview
+        if: ${{ github.event_name == 'pull_request' && always() }}
+        id: real_diff_preview
+        env:
+          RELEASEGUARD_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          RELEASEGUARD_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set +e
+          output_file="$RUNNER_TEMP/releaseguard-real-diff-preview.log"
+          npm run releaseguard -- run --base "$RELEASEGUARD_BASE_SHA" --head "$RELEASEGUARD_HEAD_SHA" > "$output_file" 2>&1
+          exit_code=$?
+          cat "$output_file"
+
+          decision="$(sed -n 's/^Decision: //p' "$output_file" | tail -n 1)"
+          reason="$(sed -n 's/^Reason: //p' "$output_file" | tail -n 1)"
+          report="$(sed -n 's/^Report: //p' "$output_file" | tail -n 1)"
+
+          {
+            echo "exit_code=$exit_code"
+            echo "decision=${decision:-UNAVAILABLE}"
+            echo "reason=${reason:-ReleaseGuard real diff preview did not produce a decision. See workflow logs.}"
+            echo "report=${report:-UNAVAILABLE}"
+          } >> "$GITHUB_OUTPUT"
+
+          # v0.1.7 preview is intentionally non-blocking. Infrastructure errors are
+          # captured in the step output and job summary instead of being hidden.
+          exit 0
 
       - name: Verify demo app restored after fixtures
         run: npm run test --workspace @releaseguard/demo-app
 
       - name: Write job summary
         if: always()
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          FIXTURE_SELFCHECK_OUTCOME: ${{ steps.fixture_self_check.outcome }}
+          REAL_DIFF_EXIT_CODE: ${{ steps.real_diff_preview.outputs.exit_code }}
+          REAL_DIFF_DECISION: ${{ steps.real_diff_preview.outputs.decision }}
+          REAL_DIFF_REASON: ${{ steps.real_diff_preview.outputs.reason }}
+          REAL_DIFF_REPORT: ${{ steps.real_diff_preview.outputs.report }}
         run: |
+          fixture_result="PASS"
+          if [ "$FIXTURE_SELFCHECK_OUTCOME" != "success" ]; then
+            fixture_result="${FIXTURE_SELFCHECK_OUTCOME:-unknown}"
+          fi
+
           {
-            echo "# ReleaseGuard v0.1 self-check"
+            echo "# ReleaseGuard"
+            echo ""
+            echo "## Fixture self-check"
             echo ""
             echo "| Fixture | Expected | Result |"
             echo "|---|---:|---:|"
-            echo "| demo-discount-regression | BLOCK | PASS |"
-            echo "| demo-missing-evidence | WARN | PASS |"
-            echo "| demo-docs-only | PASS | PASS |"
+            echo "| demo-discount-regression | BLOCK | $fixture_result |"
+            echo "| demo-missing-evidence | WARN | $fixture_result |"
+            echo "| demo-docs-only | PASS | $fixture_result |"
+            echo ""
+            echo "## Real diff preview"
+            echo ""
+            if [ "$EVENT_NAME" = "pull_request" ]; then
+              echo "Decision: ${REAL_DIFF_DECISION:-UNAVAILABLE}"
+              echo ""
+              echo "Reason: ${REAL_DIFF_REASON:-ReleaseGuard real diff preview did not run. See workflow logs.}"
+              echo ""
+              echo "Report: ${REAL_DIFF_REPORT:-UNAVAILABLE}"
+              echo ""
+              echo "Command exit code: ${REAL_DIFF_EXIT_CODE:-UNAVAILABLE}"
+            else
+              echo "Skipped: real diff preview only runs for pull_request events."
+            fi
+            echo ""
+            echo "Note: real diff preview is non-blocking in v0.1.7."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload ReleaseGuard artifacts

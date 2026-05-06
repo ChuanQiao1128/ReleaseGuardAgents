@@ -308,4 +308,35 @@ Issues:
 - None currently.
 
 Next:
-- Commit, tag `releaseguard-v0.1.6`, and push the branch/tag.
+- `v0.1.6-real-diff-demo` was tagged as `releaseguard-v0.1.6`, pushed, and fast-forward merged to `main`.
+- Continue with v0.1.7 GitHub Actions real diff preview.
+
+## v0.1.7 GitHub Actions Real Diff Preview
+
+Status: Done
+
+Done:
+- Fast-forward merged `v0.1.6-real-diff-demo` into `main` and pushed `main`.
+- Created branch `v0.1.7-actions-real-diff-preview`.
+- Updated `.github/workflows/releaseguard.yml` checkout to use `fetch-depth: 0`.
+- Kept `npm run releaseguard:selfcheck` as the required fixture validation.
+- Added a pull-request-only real diff preview step using `github.event.pull_request.base.sha` and `github.event.pull_request.head.sha`.
+- The preview step uses `always()` so it still attempts to write preview output when earlier validation fails.
+- Made real diff preview non-blocking by capturing exit code, decision, reason, and report path while exiting the preview step successfully.
+- Updated the GitHub Step Summary to include fixture self-check and real diff preview sections.
+- Updated README with GitHub Actions real diff preview behavior and limitations.
+
+Tests run:
+- `ruby -e "require 'yaml'; YAML.load_file('.github/workflows/releaseguard.yml'); puts 'workflow yaml parsed'"`
+- `npm run test --workspace releaseguard`
+- `npm run build --workspace releaseguard`
+- `npm test`
+- `npm run build --workspace @releaseguard/demo-app`
+- `npm run releaseguard:selfcheck`
+- `npm run test --workspace @releaseguard/demo-app`
+
+Issues:
+- None currently.
+
+Next:
+- Commit, tag `releaseguard-v0.1.7`, and push the branch/tag.
