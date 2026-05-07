@@ -10,6 +10,7 @@ const IGNORED_DIR_NAMES = new Set([
   "coverage",
   "dist",
   "node_modules",
+  "scanner_eval",
 ]);
 
 const SOURCE_ROOTS = ["docs", ".releaseguard/reports"];

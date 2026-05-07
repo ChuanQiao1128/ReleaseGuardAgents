@@ -128,3 +128,84 @@ Next:
 - Run scanner eval on 3-5 external repos and use unresolved rate plus pattern
   categories to decide whether the next milestone should be scanner expansion
   or browser execution.
+
+## v0.3.2 Real Repo Scanner Evaluation Pack
+
+Status: Done
+
+Done:
+- Added scanner eval runbook at `docs/scanner_eval/README.md`.
+- Added scanner eval summary at `docs/scanner_eval/summary.md`.
+- Added external repo scanner eval reports:
+  - `docs/scanner_eval/reports/next-saas-starter-scanner-eval.md`
+  - `docs/scanner_eval/reports/nextgram-scanner-eval.md`
+  - `docs/scanner_eval/reports/full-stack-fastapi-template-scanner-eval.md`
+- Updated README with scanner evaluation results and next-milestone
+  recommendation.
+- Excluded `docs/scanner_eval/**` from repo-memory indexing so scanner
+  evaluation artifacts do not perturb the v0.2 RAG benchmark corpus.
+
+Repositories evaluated:
+- `leerob/next-saas-starter` at commit `6e33e58`
+  - Framework: `nextjs_app_router_typescript`
+  - Supported: yes
+  - Routes: 8
+  - APIs: 4
+  - Resolved callsites: 0
+  - Unresolved callsites: 2
+  - Unresolved rate: `100.0%`
+  - Top unresolved pattern: `dynamic_url`
+- `vercel/nextgram` at commit `e74b346`
+  - Framework: `nextjs_app_router_typescript`
+  - Supported: yes
+  - Routes: 3
+  - APIs: 0
+  - Resolved callsites: 0
+  - Unresolved callsites: 0
+  - Unresolved rate: `0.0%`
+  - Top unresolved pattern: none
+- `tiangolo/full-stack-fastapi-template` at commit `13652b5`
+  - Framework: `unsupported_framework`
+  - Supported: no
+  - Routes: 0
+  - APIs: 0
+  - Resolved callsites: 0
+  - Unresolved callsites: 1
+  - Unresolved rate: `100.0%`
+  - Top unresolved pattern: `unsupported_framework`
+
+Commands run:
+- `npm run releaseguard -- scanner eval --root /tmp/releaseguard-scanner-eval/next-saas-starter`
+- `npm run releaseguard -- scanner eval --root /tmp/releaseguard-scanner-eval/nextgram`
+- `npm run releaseguard -- scanner eval --root /tmp/releaseguard-scanner-eval/full-stack-fastapi-template`
+- `npm run test --workspace releaseguard -- memory.test.ts`
+- `npm run test --workspace releaseguard`
+- `npm run build --workspace releaseguard`
+- `npm run releaseguard -- scanner eval --root .`
+- `npm run releaseguard -- memory index`
+- `npm run releaseguard -- memory benchmark`
+- `npm run releaseguard -- memory demo-discount-context`
+- `npm run releaseguard -- run --fixture demo-discount-regression`
+- `npm run releaseguard -- run --fixture demo-missing-evidence`
+- `npm run releaseguard -- run --fixture demo-docs-only`
+- `npm run releaseguard -- run --fixture demo-rag-elevated-evidence`
+- `npm test`
+- `npm run build --workspace @releaseguard/demo-app`
+- `npm run releaseguard:selfcheck`
+- `npm run test --workspace @releaseguard/demo-app`
+
+Recommendation:
+- v0.4 should prioritize scanner coverage expansion and override UX before
+  Playwright browser execution.
+
+Reason:
+- The first supported real app with API routes had unresolved API dependency
+  callsites because calls were hidden behind a shared dynamic fetcher. Browser
+  execution would not solve route/API impact mapping.
+
+Limitations:
+- This pack uses three external snapshots, not a statistically significant
+  benchmark.
+- External repos were cloned outside this repository and not vendored.
+- No Playwright browser flows, generated tests, GitHub App/OAuth, PR comments,
+  OpenAPI diff, dashboard, or PASS/WARN/BLOCK semantic changes were added.

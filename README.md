@@ -307,6 +307,26 @@ The report includes:
 Unsupported repositories do not crash the command. They produce an
 `unsupported_framework` report so scanner coverage gaps remain visible.
 
+## Scanner evaluation on real repositories
+
+v0.3.2 applies the scanner eval tooling to external repositories before adding
+browser execution. The current reports live under `docs/scanner_eval/`.
+Those reports are intentionally excluded from repo-memory indexing so scanner
+evaluation artifacts do not change the v0.2 RAG benchmark corpus.
+
+Summary:
+
+| Repo | Framework | Supported | Routes | APIs | Resolved | Unresolved | Unresolved rate |
+|---|---|---:|---:|---:|---:|---:|---:|
+| `leerob/next-saas-starter` | `nextjs_app_router_typescript` | yes | 8 | 4 | 0 | 2 | 100.0% |
+| `vercel/nextgram` | `nextjs_app_router_typescript` | yes | 3 | 0 | 0 | 0 | 0.0% |
+| `tiangolo/full-stack-fastapi-template` | `unsupported_framework` | no | 0 | 0 | 0 | 1 | 100.0% |
+
+The first supported real app with API routes used a shared dynamic fetcher, so
+ReleaseGuard detected routes and APIs but could not resolve frontend-to-API
+dependencies. That result points v0.4 toward scanner coverage expansion and
+override UX before Playwright browser execution.
+
 ## Day 1 demo app
 
 The v0.1 demo app lives in `apps/demo-app`.

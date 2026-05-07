@@ -93,6 +93,20 @@ describe("repo memory loader and chunker", () => {
     });
   });
 
+  it("ignores scanner evaluation reports when loading repo memory", async () => {
+    const rootDir = await tempRepo();
+    await writeFile(rootDir, "docs/keep.md", "# Keep\n\nUseful text.\n");
+    await writeFile(
+      rootDir,
+      "docs/scanner_eval/summary.md",
+      "# Scanner Eval\n\nEvaluation artifacts are not repo memory.\n",
+    );
+
+    const chunks = await loadRepoMemoryChunks(rootDir);
+
+    expect(chunks.map((chunk) => chunk.file_path)).toEqual(["docs/keep.md"]);
+  });
+
   it("loads previous ReleaseGuard reports from .releaseguard/reports", async () => {
     const rootDir = await tempRepo();
     await writeFile(
