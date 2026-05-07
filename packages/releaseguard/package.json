@@ -2,9 +2,16 @@
   "name": "releaseguard",
   "private": true,
   "version": "0.1.0",
+  "description": "PR-aware merge impact coverage gate.",
+  "license": "UNLICENSED",
   "bin": {
     "releaseguard": "dist/cli.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "package.json"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "cli": "tsx src/cli.ts",

@@ -1,0 +1,60 @@
+name: ReleaseGuard Preview
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  releaseguard-preview:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ReleaseGuard scanner eval
+        run: npx releaseguard scanner eval --repo-root .
+        continue-on-error: true
+
+      - name: Run ReleaseGuard real diff preview
+        if: github.event_name == 'pull_request'
+        run: |
+          npx releaseguard run \
+            --repo-root . \
+            --base "${{ github.event.pull_request.base.sha }}" \
+            --head "${{ github.event.pull_request.head.sha }}"
+        continue-on-error: true
+
+      - name: Write ReleaseGuard summary
+        if: always()
+        run: |
+          {
+            echo "# ReleaseGuard Preview"
+            echo
+            echo "ReleaseGuard preview is advisory in this template."
+            echo "It does not enforce BLOCK/WARN/PASS as workflow conclusions yet."
+            echo
+            echo "Artifacts, if produced, are uploaded as releaseguard-preview-artifacts."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload ReleaseGuard artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: releaseguard-preview-artifacts
+          path: |
+            .releaseguard
+            artifacts/releaseguard
+          if-no-files-found: ignore
+

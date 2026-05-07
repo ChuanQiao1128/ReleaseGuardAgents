@@ -10,6 +10,25 @@ describe("parseCliArgs", () => {
     });
   });
 
+  it("parses run repo-root arguments", () => {
+    expect(
+      parseCliArgs([
+        "run",
+        "--repo-root",
+        "../target-repo",
+        "--base",
+        "main",
+        "--head",
+        "HEAD",
+      ]),
+    ).toEqual({
+      command: "run",
+      repoRoot: "../target-repo",
+      base: "main",
+      head: "HEAD",
+    });
+  });
+
   it("parses fixture run arguments", () => {
     expect(
       parseCliArgs(["run", "--fixture", "demo-discount-regression"]),
@@ -84,6 +103,14 @@ describe("parseCliArgs", () => {
     });
   });
 
+  it("parses memory repo-root arguments", () => {
+    expect(parseCliArgs(["memory", "index", "--repo-root", "../repo"])).toEqual({
+      command: "memory",
+      action: "index",
+      repoRoot: "../repo",
+    });
+  });
+
   it("parses memory benchmark arguments", () => {
     expect(parseCliArgs(["memory", "benchmark"])).toEqual({
       command: "memory",
@@ -113,6 +140,14 @@ describe("parseCliArgs", () => {
       command: "scanner",
       action: "eval",
       root: "../repo",
+    });
+  });
+
+  it("parses scanner eval preferred repo-root arguments", () => {
+    expect(parseCliArgs(["scanner", "eval", "--repo-root", "../repo"])).toEqual({
+      command: "scanner",
+      action: "eval",
+      repoRoot: "../repo",
     });
   });
 
@@ -152,6 +187,24 @@ describe("parseCliArgs", () => {
     });
   });
 
+  it("parses coverage ingest repo-root arguments", () => {
+    expect(
+      parseCliArgs([
+        "coverage",
+        "ingest",
+        "--repo-root",
+        "../repo",
+        "--file",
+        "coverage/lcov.info",
+      ]),
+    ).toEqual({
+      command: "coverage",
+      action: "ingest",
+      repoRoot: "../repo",
+      file: "coverage/lcov.info",
+    });
+  });
+
   it("rejects memory without index", () => {
     expect(() => parseCliArgs(["memory"])).toThrow(
       "memory requires one of: index, benchmark, demo-discount-context, search.",
@@ -178,7 +231,7 @@ describe("parseCliArgs", () => {
 
   it("rejects scanner eval without a root", () => {
     expect(() => parseCliArgs(["scanner", "eval"])).toThrow(
-      "scanner eval requires --root.",
+      "scanner eval requires --repo-root or --root.",
     );
   });
 

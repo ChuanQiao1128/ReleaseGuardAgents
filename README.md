@@ -33,6 +33,13 @@ npm run releaseguard -- run --base main --head HEAD
 npm run releaseguard -- run --base origin/main --head HEAD
 ```
 
+Run against an explicit repository root:
+
+```bash
+npm run releaseguard -- scanner eval --repo-root .
+npm run releaseguard -- run --repo-root . --base main --head HEAD
+```
+
 Run the real diff regression demo on a temporary branch:
 
 ```bash
@@ -431,6 +438,40 @@ By default, coverage does not make unknown source/config/dependency changes
 silently pass. Unsupported source changes with file-level coverage still report
 the coverage context and keep fail-safe `WARN` until a stronger mapping,
 declaration, contract, or policy proves the impact.
+
+## Try ReleaseGuard in Another Repo
+
+v0.7 adds an external quickstart path using local npm packaging and explicit
+`--repo-root` flags. This is a preview workflow for trying ReleaseGuard outside
+this repository; it is not an npm registry release.
+
+Build and pack the CLI:
+
+```bash
+npm run build --workspace releaseguard
+cd packages/releaseguard
+npm pack
+```
+
+Install the tarball in another repository:
+
+```bash
+npm install --save-dev /path/to/releaseguard-0.1.0.tgz
+npx releaseguard scanner eval --repo-root .
+```
+
+External repo commands:
+
+```bash
+npx releaseguard scanner eval --repo-root .
+npx releaseguard run --repo-root . --base main --head HEAD
+npx releaseguard memory index --repo-root .
+npx releaseguard coverage ingest --repo-root . --file coverage/lcov.info
+```
+
+See [docs/external_quickstart.md](docs/external_quickstart.md) for the full
+quickstart and [docs/github_action_template.yml](docs/github_action_template.yml)
+for a non-blocking GitHub Actions preview template.
 
 ## Day 1 demo app
 

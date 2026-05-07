@@ -19,22 +19,26 @@ export type CliArgs =
       fixture?: string;
       expectDecision?: Decision;
       coverageFile?: string;
+      repoRoot?: string;
     }
   | {
       command: "coverage";
       action: "ingest";
       file: string;
       provider?: CoverageProvider;
+      repoRoot?: string;
     }
   | {
       command: "memory";
       action: "index" | "benchmark" | "demo-discount-context" | "search";
       query?: string;
+      repoRoot?: string;
     }
   | {
       command: "scanner";
       action: "eval";
-      root: string;
+      root?: string;
+      repoRoot?: string;
       coverageFile?: string;
     }
   | { command: "help" };
@@ -59,10 +63,14 @@ export function parseCliArgs(argv: string[]): CliArgs {
       );
     }
     let query: string | undefined;
+    let repoRoot: string | undefined;
     for (let index = 0; index < extra.length; index += 1) {
       const arg = extra[index];
       if (arg === "--query") {
         query = requireValue(extra, index, "--query");
+        index += 1;
+      } else if (arg === "--repo-root") {
+        repoRoot = requireValue(extra, index, "--repo-root");
         index += 1;
       } else {
         throw new Error(`Unknown argument: ${arg}`);
@@ -78,6 +86,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
       command: "memory",
       action,
       query,
+      repoRoot,
     };
   }
   if (command === "coverage") {
@@ -87,6 +96,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     }
     let file: string | undefined;
     let provider: CoverageProvider | undefined;
+    let repoRoot: string | undefined;
     for (let index = 0; index < extra.length; index += 1) {
       const arg = extra[index];
       if (arg === "--file") {
@@ -94,6 +104,9 @@ export function parseCliArgs(argv: string[]): CliArgs {
         index += 1;
       } else if (arg === "--provider") {
         provider = parseCoverageProvider(requireValue(extra, index, "--provider"));
+        index += 1;
+      } else if (arg === "--repo-root") {
+        repoRoot = requireValue(extra, index, "--repo-root");
         index += 1;
       } else {
         throw new Error(`Unknown argument: ${arg}`);
@@ -107,6 +120,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
       action,
       file,
       provider,
+      repoRoot,
     };
   }
   if (command === "scanner") {
@@ -115,11 +129,15 @@ export function parseCliArgs(argv: string[]): CliArgs {
       throw new Error("scanner requires action: eval.");
     }
     let root: string | undefined;
+    let repoRoot: string | undefined;
     let coverageFile: string | undefined;
     for (let index = 0; index < extra.length; index += 1) {
       const arg = extra[index];
       if (arg === "--root") {
         root = requireValue(extra, index, "--root");
+        index += 1;
+      } else if (arg === "--repo-root") {
+        repoRoot = requireValue(extra, index, "--repo-root");
         index += 1;
       } else if (arg === "--coverage") {
         coverageFile = requireValue(extra, index, "--coverage");
@@ -128,10 +146,10 @@ export function parseCliArgs(argv: string[]): CliArgs {
         throw new Error(`Unknown argument: ${arg}`);
       }
     }
-    if (!root) {
-      throw new Error("scanner eval requires --root.");
+    if (!root && !repoRoot) {
+      throw new Error("scanner eval requires --repo-root or --root.");
     }
-    return { command: "scanner", action, root, coverageFile };
+    return { command: "scanner", action, root, repoRoot, coverageFile };
   }
 
   if (command !== "run") {
@@ -158,6 +176,9 @@ export function parseCliArgs(argv: string[]): CliArgs {
     } else if (arg === "--coverage") {
       parsed.coverageFile = requireValue(rest, index, "--coverage");
       index += 1;
+    } else if (arg === "--repo-root") {
+      parsed.repoRoot = requireValue(rest, index, "--repo-root");
+      index += 1;
     } else {
       throw new Error(`Unknown argument: ${arg}`);
     }
@@ -176,7 +197,7 @@ export async function runCli(argv = process.argv.slice(2)): Promise<void> {
     return;
   }
 
-  const rootDir = resolveRootDir();
+  const rootDir = resolveCommandRootDir(args);
   if (args.command === "coverage") {
     const { report, outputPath } = await writeCoverageReport({
       repoRoot: rootDir,
@@ -190,9 +211,10 @@ export async function runCli(argv = process.argv.slice(2)): Promise<void> {
     return;
   }
   if (args.command === "scanner") {
+    const repoRoot = resolveUserPath(args.repoRoot ?? args.root ?? ".");
     const result = await runScannerEval({
-      workspaceRoot: rootDir,
-      repoRoot: resolveUserPath(args.root),
+      workspaceRoot: repoRoot,
+      repoRoot,
       coverageFile: args.coverageFile,
     });
     console.log(`Scanner eval repo: ${result.repo_path}`);
@@ -298,6 +320,13 @@ function resolveRootDir(): string {
   }
 }
 
+function resolveCommandRootDir(args: CliArgs): string {
+  if ("repoRoot" in args && args.repoRoot) {
+    return resolveUserPath(args.repoRoot);
+  }
+  return resolveRootDir();
+}
+
 function resolveUserPath(userPath: string): string {
   return path.resolve(process.env.INIT_CWD ?? process.cwd(), userPath);
 }
@@ -343,6 +372,7 @@ function usage(): string {
   return [
     "Usage:",
     "  releaseguard run --base <base> --head <head>",
+    "  releaseguard run --repo-root <repo_path> --base <base> --head <head>",
     "  releaseguard run --fixture demo-discount-regression",
     "  releaseguard run --fixture demo-missing-evidence",
     "  releaseguard run --fixture demo-docs-only",
@@ -350,11 +380,13 @@ function usage(): string {
     "  releaseguard run --fixture demo-coverage-supplemental-evidence --coverage <coverage_file>",
     "  releaseguard run --fixture demo-docs-only --expect-decision PASS",
     "  releaseguard memory index",
+    "  releaseguard memory index --repo-root <repo_path>",
     "  releaseguard memory benchmark",
     "  releaseguard memory demo-discount-context",
     '  releaseguard memory search --query "discount checkout crash"',
-    "  releaseguard coverage ingest --file <coverage_file>",
+    "  releaseguard coverage ingest --repo-root <repo_path> --file <coverage_file>",
     "  releaseguard scanner eval --root <repo_path>",
+    "  releaseguard scanner eval --repo-root <repo_path>",
     "  releaseguard scanner eval --root <repo_path> --coverage <coverage_file>",
   ].join("\n");
 }

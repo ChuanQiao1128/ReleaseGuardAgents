@@ -14,6 +14,7 @@ const IGNORED_DIR_NAMES = new Set([
 ]);
 
 const SOURCE_ROOTS = ["docs", ".releaseguard/reports"];
+const IGNORED_MARKDOWN_FILE_NAMES = new Set(["external_quickstart.md"]);
 
 export async function loadRepoMemoryChunks(
   rootDir: string,
@@ -74,7 +75,12 @@ async function listMarkdownFiles(dir: string): Promise<string[]> {
       continue;
     }
 
-    if (entry.isFile() && /\.md$/i.test(entry.name) && !/^rag_/i.test(entry.name)) {
+    if (
+      entry.isFile() &&
+      /\.md$/i.test(entry.name) &&
+      !/^rag_/i.test(entry.name) &&
+      !IGNORED_MARKDOWN_FILE_NAMES.has(entry.name)
+    ) {
       files.push(absolutePath);
     }
   }
