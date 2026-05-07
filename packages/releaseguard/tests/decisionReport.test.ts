@@ -59,6 +59,7 @@ describe("decision engine and markdown report", () => {
           requiredTags: ["invalid_discount", "400", "error_status"],
         },
       ],
+      coverageEvidence: [],
     };
     const executionResult: EvidenceExecutionResult = {
       results: [],
@@ -102,10 +103,11 @@ describe("decision engine and markdown report", () => {
       decide({
         graph,
         evidencePlan: {
-          requirements: [],
-          selectedEvidence: [],
-          missingEvidence: [],
-        },
+        requirements: [],
+        selectedEvidence: [],
+        missingEvidence: [],
+        coverageEvidence: [],
+      },
         executionResult,
         docsOnly: true,
       }),
@@ -182,6 +184,9 @@ describe("decision engine and markdown report", () => {
 
       ## Missing evidence
       - None
+
+      ## Coverage evidence
+      - No coverage report provided.
 
       ## Test results
       - tests/api/discount.test.ts: FAILED (exit 1, 10ms)

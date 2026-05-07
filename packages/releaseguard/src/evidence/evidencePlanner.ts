@@ -1,4 +1,9 @@
 import { CapabilityGraph, TestCaseTag } from "../graph/types";
+import { CoverageReport } from "../coverage/types";
+import {
+  findCoverageEvidenceForCapability,
+  findCoverageEvidenceForFiles,
+} from "../coverage/coverageEvidence";
 import { HistoricalRiskContext } from "../memory/historicalRiskContext";
 import { EvidencePlan, EvidenceRequirement, MissingEvidence } from "./types";
 import { selectExistingTests } from "./existingTestSelector";
@@ -13,12 +18,28 @@ export function planEvidence(input: {
   graph: CapabilityGraph;
   affectedCapabilityIds: string[];
   historicalRiskContexts?: HistoricalRiskContext[];
+  coverageReport?: CoverageReport;
+  changedFiles?: string[];
 }): EvidencePlan {
   const requirements: EvidenceRequirement[] = [];
   const missingEvidence: MissingEvidence[] = [];
   const selectedEvidence = [];
+  const coverageEvidence = [
+    ...findCoverageEvidenceForFiles({
+      coverageReport: input.coverageReport,
+      graph: input.graph,
+      filePaths: input.changedFiles ?? [],
+    }),
+  ];
 
   for (const capabilityId of input.affectedCapabilityIds) {
+    coverageEvidence.push(
+      ...findCoverageEvidenceForCapability({
+        coverageReport: input.coverageReport,
+        graph: input.graph,
+        capabilityId,
+      }),
+    );
     if (capabilityId !== "api_apply_discount") {
       continue;
     }
@@ -90,5 +111,20 @@ export function planEvidence(input: {
     requirements,
     selectedEvidence,
     missingEvidence,
+    coverageEvidence: dedupeCoverageEvidence(coverageEvidence),
   };
+}
+
+function dedupeCoverageEvidence<T extends { coverage_record_id: string; capability_id?: string }>(
+  evidence: T[],
+): T[] {
+  const seen = new Set<string>();
+  return evidence.filter((item) => {
+    const key = `${item.capability_id ?? "file"}:${item.coverage_record_id}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
 }

@@ -1,5 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { ingestCoverageFile } from "../coverage/coverageIngest";
+import { CoverageReport } from "../coverage/types";
 import { CapabilityGraph } from "../graph/types";
 import { ResolutionLevelCounts, emptyResolutionLevelCounts } from "../impact/resolutionLevel";
 import { detectFramework } from "./frameworkDetector";
@@ -28,6 +30,8 @@ export type ScannerEvalResult = {
   package_nodes_detected: number;
   universal_fallback_nodes: number;
   framework_capability_nodes: number;
+  coverage_file_count: number;
+  coverage_matched_file_count: number;
   top_unresolved_patterns: Array<{
     pattern: UnresolvedPatternCategory;
     count: number;
@@ -44,6 +48,7 @@ export type ScannerEvalResult = {
 export async function runScannerEval(args: {
   workspaceRoot: string;
   repoRoot: string;
+  coverageFile?: string;
 }): Promise<ScannerEvalResult> {
   const repoRoot = path.resolve(args.repoRoot);
   const outputDir = path.join(
@@ -62,6 +67,8 @@ export async function runScannerEval(args: {
   let coverage = emptyCoverage();
   let graph: CapabilityGraph | undefined;
   let scannerError: string | undefined;
+  let coverageReport: CoverageReport | undefined;
+  let coverageError: string | undefined;
 
   try {
     const scan = await scanRepository(repoRoot);
@@ -77,6 +84,17 @@ export async function runScannerEval(args: {
     }
   } catch (error) {
     scannerError = error instanceof Error ? error.message : String(error);
+  }
+
+  if (args.coverageFile) {
+    try {
+      coverageReport = await ingestCoverageFile({
+        repoRoot,
+        coverageFile: args.coverageFile,
+      });
+    } catch (error) {
+      coverageError = error instanceof Error ? error.message : String(error);
+    }
   }
 
   if (
@@ -96,6 +114,15 @@ export async function runScannerEval(args: {
   const unresolvedCallsites = coverage.unresolvedCallsites.map(withPattern);
   const patternCounts = unresolvedPatternCounts(unresolvedCallsites);
   const suggestions = suggestOverrides({ coverage, unresolvedCallsites });
+  const coverageMatch = matchCoverageToGraph(graph, coverageReport);
+  if (coverageMatch.matched_file_count > 0) {
+    coverage.resolutionLevelCounts = {
+      ...coverage.resolutionLevelCounts,
+      L4_TEST_EVIDENCE_MAPPED:
+        (coverage.resolutionLevelCounts?.L4_TEST_EVIDENCE_MAPPED ?? 0) +
+        coverageMatch.matched_file_count,
+    };
+  }
   const graphPath = graph
     ? path.join(outputDir, "capability_graph.json")
     : undefined;
@@ -116,6 +143,15 @@ export async function runScannerEval(args: {
       file_role_counts: coverage.fileRoleCounts ?? {},
       resolution_level_distribution: normalizedResolutionCounts(coverage),
       adapter_contribution: contribution,
+      coverage: coverageReport
+        ? {
+            provider: coverageReport.provider,
+            file_count: coverageReport.file_count,
+            covered_file_count: coverageReport.covered_file_count,
+            matched_file_count: coverageMatch.matched_file_count,
+            matched_files: coverageMatch.matched_files,
+          }
+        : undefined,
       unresolved_callsites: unresolvedCallsites,
       suggested_overrides: suggestions,
     }, null, 2)}\n`,
@@ -142,6 +178,8 @@ export async function runScannerEval(args: {
     package_nodes_detected: contribution.package_nodes,
     universal_fallback_nodes: contribution.universal_fallback_nodes,
     framework_capability_nodes: contribution.framework_capability_nodes,
+    coverage_file_count: coverageReport?.file_count ?? 0,
+    coverage_matched_file_count: coverageMatch.matched_file_count,
     top_unresolved_patterns: patternCounts,
     file_role_counts: coverage.fileRoleCounts ?? {},
     resolution_level_distribution: normalizedResolutionCounts(coverage),
@@ -158,6 +196,9 @@ export async function runScannerEval(args: {
       result,
       coverage: { ...coverage, unresolvedCallsites },
       scannerError,
+      coverageReport,
+      coverageError,
+      coverageMatchedFiles: coverageMatch.matched_files,
     }),
   );
 
@@ -168,6 +209,9 @@ function renderScannerEvalMarkdown(args: {
   result: ScannerEvalResult;
   coverage: ScannerCoverage;
   scannerError?: string;
+  coverageReport?: CoverageReport;
+  coverageError?: string;
+  coverageMatchedFiles?: string[];
 }): string {
   return [
     "# ReleaseGuard Scanner Eval",
@@ -190,6 +234,7 @@ function renderScannerEvalMarkdown(args: {
     `- Unresolved rate: ${formatPercent(args.result.unresolved_rate)}`,
     `- Detected module nodes: ${args.result.module_nodes_detected}`,
     `- Detected package nodes: ${args.result.package_nodes_detected}`,
+    `- Coverage files matched: ${args.result.coverage_matched_file_count}`,
     "",
     "## File role counts",
     ...listOrNone(
@@ -209,6 +254,13 @@ function renderScannerEvalMarkdown(args: {
     `- Test evidence nodes: ${args.result.tests_detected}`,
     `- Universal fallback contribution: file/module/package impact context for every scanned repo.`,
     `- Framework adapter contribution: route/API precision when the repository matches a supported adapter.`,
+    "",
+    "## Coverage evidence",
+    ...coverageEvidenceLines(
+      args.coverageReport,
+      args.coverageError,
+      args.coverageMatchedFiles ?? [],
+    ),
     "",
     "## Fail-safe implication",
     ...failSafeImplicationLines(args.result),
@@ -261,6 +313,34 @@ function renderScannerEvalMarkdown(args: {
   ].join("\n");
 }
 
+function coverageEvidenceLines(
+  coverageReport: CoverageReport | undefined,
+  coverageError: string | undefined,
+  matchedFiles: string[],
+): string[] {
+  if (coverageError) {
+    return [`- Coverage parse error: ${coverageError}`];
+  }
+  if (!coverageReport) {
+    return ["- No coverage report provided."];
+  }
+  return [
+    `- Provider: ${coverageReport.provider}`,
+    `- Files in coverage report: ${coverageReport.file_count}`,
+    `- Covered files in coverage report: ${coverageReport.covered_file_count}`,
+    `- Matched graph files: ${matchedFiles.length}`,
+    ...listOrNone(
+      matchedFiles.map((filePath) => {
+        const record = coverageReport.records.find(
+          (item) => item.normalized_file_path === filePath,
+        );
+        return `- ${filePath}: ${record?.line_coverage_percent.toFixed(2) ?? "0.00"}% line coverage`;
+      }),
+    ),
+    "- Limitation: coverage shows a file was executed by tests, but does not prove a specific business case was asserted.",
+  ];
+}
+
 function graphContribution(graph: CapabilityGraph | undefined): {
   file_nodes: number;
   module_nodes: number;
@@ -281,6 +361,31 @@ function graphContribution(graph: CapabilityGraph | undefined): {
     package_nodes,
     universal_fallback_nodes: file_nodes + module_nodes + package_nodes,
     framework_capability_nodes,
+  };
+}
+
+function matchCoverageToGraph(
+  graph: CapabilityGraph | undefined,
+  coverageReport: CoverageReport | undefined,
+): { matched_file_count: number; matched_files: string[] } {
+  if (!graph || !coverageReport) {
+    return {
+      matched_file_count: 0,
+      matched_files: [],
+    };
+  }
+  const graphFiles = new Set(
+    Object.values(graph.nodes)
+      .filter((node) => node.type === "file" && node.filePath)
+      .map((node) => node.filePath as string),
+  );
+  const matchedFiles = coverageReport.records
+    .map((record) => record.normalized_file_path)
+    .filter((filePath) => graphFiles.has(filePath))
+    .sort();
+  return {
+    matched_file_count: matchedFiles.length,
+    matched_files: matchedFiles,
   };
 }
 

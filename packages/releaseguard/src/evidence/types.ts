@@ -1,4 +1,5 @@
 import { TestCaseTag } from "../graph/types";
+import { CoverageEvidence } from "../coverage/types";
 
 export type EvidenceRequirementType =
   | "existing_test"
@@ -42,4 +43,5 @@ export type EvidencePlan = {
   requirements: EvidenceRequirement[];
   selectedEvidence: SelectedEvidence[];
   missingEvidence: MissingEvidence[];
+  coverageEvidence: CoverageEvidence[];
 };

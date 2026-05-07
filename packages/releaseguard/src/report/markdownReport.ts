@@ -1,5 +1,6 @@
 import path from "node:path";
 import { ChangeImpactAgentOutput } from "../agents/schemas";
+import { CoverageReport } from "../coverage/types";
 import { DecisionResult } from "../decision/decisionEngine";
 import { ChangeScope } from "../diff/diffParser";
 import { EvidencePlan } from "../evidence/types";
@@ -17,6 +18,7 @@ export function renderMarkdownReport(input: {
   historicalRiskContexts?: HistoricalRiskContext[];
   graphPath?: string;
   coveragePath?: string;
+  coverageReport?: CoverageReport;
   artifactDir: string;
 }): string {
   const rel = (filePath: string) =>
@@ -63,6 +65,9 @@ export function renderMarkdownReport(input: {
       ),
     ),
     "",
+    "## Coverage evidence",
+    ...coverageEvidenceLines(input.evidencePlan, input.coverageReport),
+    "",
     "## Test results",
     ...listOrNone(
       input.executionResult.results.map(
@@ -83,6 +88,31 @@ export function renderMarkdownReport(input: {
     `- Test results: ${rel(input.executionResult.testResultsPath)}`,
     "",
   ].join("\n");
+}
+
+function coverageEvidenceLines(
+  evidencePlan: EvidencePlan,
+  coverageReport: CoverageReport | undefined,
+): string[] {
+  if (!coverageReport) {
+    return ["- No coverage report provided."];
+  }
+  if (evidencePlan.coverageEvidence.length === 0) {
+    return [
+      `- Coverage report parsed (${coverageReport.provider}), but no changed or affected files matched coverage records.`,
+      "- Limitation: coverage shows file execution by tests, not business-case assertions.",
+    ];
+  }
+  return [
+    `- Provider: ${coverageReport.provider}`,
+    ...evidencePlan.coverageEvidence.map((evidence) => {
+      const capability = evidence.capability_id
+        ? ` for ${evidence.capability_id}`
+        : "";
+      return `- ${evidence.file_path}${capability}: ${evidence.line_coverage_percent.toFixed(2)}% line coverage (${evidence.evidence_strength})`;
+    }),
+    "- Limitation: coverage shows this file was executed by tests, but does not prove the specific business case was asserted.",
+  ];
 }
 
 function changedFileLines(scope: ChangeScope): string[] {

@@ -42,6 +42,25 @@ describe("parseCliArgs", () => {
     });
   });
 
+  it("parses run coverage arguments", () => {
+    expect(
+      parseCliArgs([
+        "run",
+        "--base",
+        "main",
+        "--head",
+        "HEAD",
+        "--coverage",
+        "coverage/lcov.info",
+      ]),
+    ).toEqual({
+      command: "run",
+      base: "main",
+      head: "HEAD",
+      coverageFile: "coverage/lcov.info",
+    });
+  });
+
   it("parses memory index arguments", () => {
     expect(parseCliArgs(["memory", "index"])).toEqual({
       command: "memory",
@@ -81,6 +100,42 @@ describe("parseCliArgs", () => {
     });
   });
 
+  it("parses scanner eval coverage arguments", () => {
+    expect(
+      parseCliArgs([
+        "scanner",
+        "eval",
+        "--root",
+        "../repo",
+        "--coverage",
+        "coverage/lcov.info",
+      ]),
+    ).toEqual({
+      command: "scanner",
+      action: "eval",
+      root: "../repo",
+      coverageFile: "coverage/lcov.info",
+    });
+  });
+
+  it("parses coverage ingest arguments", () => {
+    expect(
+      parseCliArgs([
+        "coverage",
+        "ingest",
+        "--file",
+        "coverage/cobertura.xml",
+        "--provider",
+        "cobertura",
+      ]),
+    ).toEqual({
+      command: "coverage",
+      action: "ingest",
+      file: "coverage/cobertura.xml",
+      provider: "cobertura",
+    });
+  });
+
   it("rejects memory without index", () => {
     expect(() => parseCliArgs(["memory"])).toThrow(
       "memory requires one of: index, benchmark, demo-discount-context, search.",
@@ -108,6 +163,12 @@ describe("parseCliArgs", () => {
   it("rejects scanner eval without a root", () => {
     expect(() => parseCliArgs(["scanner", "eval"])).toThrow(
       "scanner eval requires --root.",
+    );
+  });
+
+  it("rejects coverage ingest without a file", () => {
+    expect(() => parseCliArgs(["coverage", "ingest"])).toThrow(
+      "coverage ingest requires --file.",
     );
   });
 

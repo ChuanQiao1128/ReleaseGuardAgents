@@ -369,6 +369,56 @@ fail-safe implications. This keeps the product claim honest: ReleaseGuard does
 not automatically understand every framework, but every repo can get a
 minimum safe impact report.
 
+## v0.6 Coverage Ingestion
+
+v0.6 adds coverage ingestion before Playwright because coverage is more
+language/framework-agnostic. Browser smoke tests need a reliable affected route;
+coverage can already answer a more basic question for many repositories:
+
+```text
+Did any test suite execute the changed file?
+```
+
+Supported coverage formats in v0.6:
+
+- LCOV (`lcov.info`) for JavaScript/TypeScript coverage tools.
+- Cobertura XML for `coverage.py` and generic CI coverage exports.
+
+Ingest a coverage report:
+
+```bash
+npm run releaseguard -- coverage ingest --file packages/releaseguard/fixtures/coverage/lcov.info
+```
+
+Use coverage in scanner eval:
+
+```bash
+npm run releaseguard -- scanner eval --root . --coverage packages/releaseguard/fixtures/coverage/lcov.info
+```
+
+Use coverage in run mode:
+
+```bash
+npm run releaseguard -- run --base main --head HEAD --coverage coverage/lcov.info
+```
+
+Coverage evidence is supplemental. It is weaker than declared case evidence and
+direct test mapping:
+
+```text
+declared_case_evidence > direct_test_mapping > coverage_file_evidence > missing_evidence
+```
+
+Coverage can show that a file or line was executed by a test suite. It does not
+prove a specific business case was asserted. For example, file coverage for
+`POST /api/discount/apply` does not satisfy the required `invalid_discount`
+case unless the test scanner or an explicit declaration also proves those tags.
+
+By default, coverage does not make unknown source/config/dependency changes
+silently pass. Unsupported source changes with file-level coverage still report
+the coverage context and keep fail-safe `WARN` until a stronger mapping,
+declaration, contract, or policy proves the impact.
+
 ## Day 1 demo app
 
 The v0.1 demo app lives in `apps/demo-app`.

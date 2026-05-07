@@ -3,6 +3,7 @@ import path from "node:path";
 import { DeterministicChangeImpactAgent } from "./agents/changeImpactAgent";
 import { ChangeImpactAgentOutput } from "./agents/schemas";
 import { validateChangeImpactOutput } from "./citations/citationValidator";
+import { ingestCoverageFile } from "./coverage/coverageIngest";
 import { decide, DecisionResult } from "./decision/decisionEngine";
 import { ChangeScope, resolveChangeScope } from "./diff/diffParser";
 import { planEvidence } from "./evidence/evidencePlanner";
@@ -29,6 +30,7 @@ export type RunReleaseGuardOptions = {
   base?: string;
   head?: string;
   fixture?: string;
+  coverageFile?: string;
 };
 
 export type RunReleaseGuardResult = {
@@ -54,14 +56,16 @@ export async function runReleaseGuard(
   });
 
   return runReleaseGuardWithScope({
-    rootDir,
-    scope,
+      rootDir,
+      scope,
+      coverageFile: options.coverageFile,
   });
 }
 
 export async function runReleaseGuardWithScope(options: {
   rootDir: string;
   scope: ChangeScope;
+  coverageFile?: string;
 }): Promise<RunReleaseGuardResult> {
   const rootDir = options.rootDir;
   const runId = createRunId();
@@ -115,6 +119,12 @@ export async function runReleaseGuardWithScope(options: {
     }
 
     const { graph, result: scannerResult } = await scanRepository(rootDir);
+    const coverageReport = options.coverageFile
+      ? await ingestCoverageFile({
+          repoRoot: rootDir,
+          coverageFile: options.coverageFile,
+        })
+      : undefined;
     const impactResolution = resolveImpact({
       changedFiles: scope.changedFiles,
       graph,
@@ -149,6 +159,8 @@ export async function runReleaseGuardWithScope(options: {
       graph,
       affectedCapabilityIds: impact.affected_capability_ids,
       historicalRiskContexts,
+      coverageReport,
+      changedFiles: scope.changedFiles,
     });
 
     let executionResult: EvidenceExecutionResult;
@@ -197,6 +209,7 @@ export async function runReleaseGuardWithScope(options: {
         historicalRiskContexts,
         graphPath: scannerResult.graphPath,
         coveragePath: scannerResult.coveragePath,
+        coverageReport,
         artifactDir,
       }),
     );
@@ -259,6 +272,7 @@ function emptyEvidencePlan(): EvidencePlan {
     requirements: [],
     selectedEvidence: [],
     missingEvidence: [],
+    coverageEvidence: [],
   };
 }
 

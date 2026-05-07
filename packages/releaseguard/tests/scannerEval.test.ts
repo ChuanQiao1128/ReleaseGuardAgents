@@ -44,6 +44,39 @@ describe("scanner eval", () => {
     );
   });
 
+  it("includes optional coverage evidence in scanner eval reports", async () => {
+    const result = await runScannerEval({
+      workspaceRoot: repoRoot,
+      repoRoot,
+      coverageFile: "packages/releaseguard/fixtures/coverage/lcov.info",
+    });
+    const report = await fs.readFile(result.report_path, "utf8");
+    const unresolved = JSON.parse(
+      await fs.readFile(result.unresolved_report_path, "utf8"),
+    ) as {
+      coverage?: {
+        provider: string;
+        matched_file_count: number;
+        matched_files: string[];
+      };
+    };
+
+    expect(result.coverage_file_count).toBe(2);
+    expect(result.coverage_matched_file_count).toBeGreaterThanOrEqual(2);
+    expect(result.resolution_level_distribution.L4_TEST_EVIDENCE_MAPPED).toBeGreaterThan(
+      0,
+    );
+    expect(report).toContain("## Coverage evidence");
+    expect(report).toContain("coverage shows a file was executed by tests");
+    expect(report).toContain(
+      "apps/demo-app/src/app/api/discount/apply/route.ts",
+    );
+    expect(unresolved.coverage?.provider).toBe("lcov");
+    expect(unresolved.coverage?.matched_files).toContain(
+      "apps/demo-app/src/app/api/discount/apply/route.ts",
+    );
+  });
+
   it("writes unsupported framework reports instead of crashing", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "releaseguard-unsupported-"));
     await fs.writeFile(path.join(tempRoot, "package.json"), "{}\n");

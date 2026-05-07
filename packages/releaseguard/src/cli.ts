@@ -3,6 +3,8 @@ import path from "node:path";
 import { existsSync } from "node:fs";
 import { runReleaseGuard } from "./run";
 import { Decision } from "./decision/decisionEngine";
+import { CoverageProvider } from "./coverage/types";
+import { writeCoverageReport } from "./coverage/coverageIngest";
 import { writeRepoMemoryIndex } from "./memory/memoryIndex";
 import { runRagBenchmark } from "./memory/benchmark";
 import { writeRagDemoDiscountContext } from "./memory/demoDiscountContext";
@@ -16,6 +18,13 @@ export type CliArgs =
       head?: string;
       fixture?: string;
       expectDecision?: Decision;
+      coverageFile?: string;
+    }
+  | {
+      command: "coverage";
+      action: "ingest";
+      file: string;
+      provider?: CoverageProvider;
     }
   | {
       command: "memory";
@@ -26,6 +35,7 @@ export type CliArgs =
       command: "scanner";
       action: "eval";
       root: string;
+      coverageFile?: string;
     }
   | { command: "help" };
 
@@ -70,16 +80,49 @@ export function parseCliArgs(argv: string[]): CliArgs {
       query,
     };
   }
+  if (command === "coverage") {
+    const [action, ...extra] = rest;
+    if (action !== "ingest") {
+      throw new Error("coverage requires action: ingest.");
+    }
+    let file: string | undefined;
+    let provider: CoverageProvider | undefined;
+    for (let index = 0; index < extra.length; index += 1) {
+      const arg = extra[index];
+      if (arg === "--file") {
+        file = requireValue(extra, index, "--file");
+        index += 1;
+      } else if (arg === "--provider") {
+        provider = parseCoverageProvider(requireValue(extra, index, "--provider"));
+        index += 1;
+      } else {
+        throw new Error(`Unknown argument: ${arg}`);
+      }
+    }
+    if (!file) {
+      throw new Error("coverage ingest requires --file.");
+    }
+    return {
+      command: "coverage",
+      action,
+      file,
+      provider,
+    };
+  }
   if (command === "scanner") {
     const [action, ...extra] = rest;
     if (action !== "eval") {
       throw new Error("scanner requires action: eval.");
     }
     let root: string | undefined;
+    let coverageFile: string | undefined;
     for (let index = 0; index < extra.length; index += 1) {
       const arg = extra[index];
       if (arg === "--root") {
         root = requireValue(extra, index, "--root");
+        index += 1;
+      } else if (arg === "--coverage") {
+        coverageFile = requireValue(extra, index, "--coverage");
         index += 1;
       } else {
         throw new Error(`Unknown argument: ${arg}`);
@@ -88,7 +131,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     if (!root) {
       throw new Error("scanner eval requires --root.");
     }
-    return { command: "scanner", action, root };
+    return { command: "scanner", action, root, coverageFile };
   }
 
   if (command !== "run") {
@@ -112,6 +155,9 @@ export function parseCliArgs(argv: string[]): CliArgs {
         requireValue(rest, index, "--expect-decision"),
       );
       index += 1;
+    } else if (arg === "--coverage") {
+      parsed.coverageFile = requireValue(rest, index, "--coverage");
+      index += 1;
     } else {
       throw new Error(`Unknown argument: ${arg}`);
     }
@@ -131,10 +177,23 @@ export async function runCli(argv = process.argv.slice(2)): Promise<void> {
   }
 
   const rootDir = resolveRootDir();
+  if (args.command === "coverage") {
+    const { report, outputPath } = await writeCoverageReport({
+      repoRoot: rootDir,
+      coverageFile: args.file,
+      provider: args.provider,
+    });
+    console.log(`Coverage provider: ${report.provider}`);
+    console.log(`Coverage files: ${report.file_count}`);
+    console.log(`Covered files: ${report.covered_file_count}`);
+    console.log(`Output: ${relativePath(rootDir, outputPath)}`);
+    return;
+  }
   if (args.command === "scanner") {
     const result = await runScannerEval({
       workspaceRoot: rootDir,
       repoRoot: resolveUserPath(args.root),
+      coverageFile: args.coverageFile,
     });
     console.log(`Scanner eval repo: ${result.repo_path}`);
     console.log(`Framework detected: ${result.framework_detected}`);
@@ -144,6 +203,10 @@ export async function runCli(argv = process.argv.slice(2)): Promise<void> {
     console.log(`Resolved callsites: ${result.resolved_callsites}`);
     console.log(`Unresolved callsites: ${result.unresolved_callsites}`);
     console.log(`Unresolved rate: ${(result.unresolved_rate * 100).toFixed(1)}%`);
+    if (args.coverageFile) {
+      console.log(`Coverage files: ${result.coverage_file_count}`);
+      console.log(`Coverage matched files: ${result.coverage_matched_file_count}`);
+    }
     console.log(`Report: ${relativePath(rootDir, result.report_path)}`);
     return;
   }
@@ -200,6 +263,7 @@ export async function runCli(argv = process.argv.slice(2)): Promise<void> {
     base: args.base,
     head: args.head,
     fixture: args.fixture,
+    coverageFile: args.coverageFile,
   });
   const report = path
     .relative(rootDir, result.reportPath)
@@ -255,6 +319,13 @@ function parseExpectedDecision(value: string): Decision {
   return value as Decision;
 }
 
+function parseCoverageProvider(value: string): CoverageProvider {
+  if (value !== "lcov" && value !== "cobertura") {
+    throw new Error("--provider must be one of lcov or cobertura.");
+  }
+  return value;
+}
+
 export function assertExpectedDecision(
   actual: Decision,
   expected: Decision | undefined,
@@ -281,7 +352,9 @@ function usage(): string {
     "  releaseguard memory benchmark",
     "  releaseguard memory demo-discount-context",
     '  releaseguard memory search --query "discount checkout crash"',
+    "  releaseguard coverage ingest --file <coverage_file>",
     "  releaseguard scanner eval --root <repo_path>",
+    "  releaseguard scanner eval --root <repo_path> --coverage <coverage_file>",
   ].join("\n");
 }
 
