@@ -45,9 +45,21 @@ npm pack
 Install in another repository:
 
 ```bash
-npm install --save-dev /path/to/releaseguard-0.1.0.tgz
+npm install --save-dev /path/to/releaseguard-0.7.1.tgz
 npx releaseguard scanner eval --repo-root .
 ```
+
+## v0.7.1 Package Polish
+
+Done:
+
+- Updated `packages/releaseguard/package.json` version to `0.7.1`.
+- Updated package lock metadata for the workspace package.
+- Updated external quickstart docs to reference:
+  - `releaseguard-0.7.1.tgz`
+- Confirmed the package name remains `releaseguard`.
+- Confirmed the CLI bin remains:
+  - `releaseguard -> dist/cli.js`
 
 ## Limits
 
@@ -80,6 +92,7 @@ npm run build --workspace @releaseguard/demo-app
 npm run test --workspace @releaseguard/demo-app
 cd packages/releaseguard && npm pack
 ./scripts/external_smoke_test.sh
+./scripts/verify_releaseguard.sh
 ```
 
 Final verification result: passed.
@@ -87,7 +100,7 @@ Final verification result: passed.
 Package output:
 
 ```text
-releaseguard-0.1.0.tgz
+releaseguard-0.7.1.tgz
 ```
 
 External smoke result:

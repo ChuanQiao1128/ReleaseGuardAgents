@@ -456,7 +456,7 @@ npm pack
 Install the tarball in another repository:
 
 ```bash
-npm install --save-dev /path/to/releaseguard-0.1.0.tgz
+npm install --save-dev /path/to/releaseguard-0.7.1.tgz
 npx releaseguard scanner eval --repo-root .
 ```
 

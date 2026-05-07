@@ -17,7 +17,7 @@ npm pack
 This creates a tarball such as:
 
 ```text
-releaseguard-0.1.0.tgz
+releaseguard-0.7.1.tgz
 ```
 
 ## 2. Install in another repository
@@ -25,7 +25,7 @@ releaseguard-0.1.0.tgz
 From the target repository:
 
 ```bash
-npm install --save-dev /path/to/ReleaseGuard/packages/releaseguard/releaseguard-0.1.0.tgz
+npm install --save-dev /path/to/ReleaseGuard/packages/releaseguard/releaseguard-0.7.1.tgz
 ```
 
 Then run:
