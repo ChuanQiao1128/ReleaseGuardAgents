@@ -73,6 +73,14 @@ describe("parseCliArgs", () => {
     });
   });
 
+  it("parses scanner eval arguments", () => {
+    expect(parseCliArgs(["scanner", "eval", "--root", "../repo"])).toEqual({
+      command: "scanner",
+      action: "eval",
+      root: "../repo",
+    });
+  });
+
   it("rejects memory without index", () => {
     expect(() => parseCliArgs(["memory"])).toThrow(
       "memory requires one of: index, benchmark, demo-discount-context, search.",
@@ -95,6 +103,12 @@ describe("parseCliArgs", () => {
         "MERGE",
       ]),
     ).toThrow("--expect-decision must be one of PASS, WARN, or BLOCK");
+  });
+
+  it("rejects scanner eval without a root", () => {
+    expect(() => parseCliArgs(["scanner", "eval"])).toThrow(
+      "scanner eval requires --root.",
+    );
   });
 
   it("rejects run without diff or fixture arguments", () => {

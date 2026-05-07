@@ -1,4 +1,5 @@
 import { ConfidenceLevel } from "../graph/types";
+import { UnresolvedPatternCategory } from "./unresolvedPatternClassifier";
 
 export type ResolvedCallsite = {
   filePath: string;
@@ -17,6 +18,7 @@ export type UnresolvedCallsite = {
   reason: string;
   quote: string;
   confidence: "unresolved";
+  pattern?: UnresolvedPatternCategory;
 };
 
 export type ScannerCoverage = {
@@ -34,4 +36,3 @@ export type ScannerResult = {
   coveragePath: string;
   coverage: ScannerCoverage;
 };
-

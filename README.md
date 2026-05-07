@@ -274,6 +274,39 @@ That validated context adds a missing high-priority `browser_smoke` requirement
 for `/checkout`. v0.3 does not implement a browser executor, so the missing
 browser evidence produces `WARN`, not `BLOCK`.
 
+## Scanner evaluation before Playwright
+
+Before adding browser execution, ReleaseGuard validates the Capability Graph
+scanner itself. The scanner eval command measures what the current scanner can
+infer and what it has to leave unresolved.
+
+```bash
+npm run releaseguard -- scanner eval --root .
+```
+
+This writes:
+
+```text
+.releaseguard/scanner_eval/<repo_name>/scanner_eval_report.md
+.releaseguard/scanner_eval/<repo_name>/capability_graph.json
+.releaseguard/scanner_eval/<repo_name>/unresolved_report.json
+```
+
+The report includes:
+
+- framework detected,
+- scanned file count,
+- detected routes,
+- detected APIs,
+- detected test nodes,
+- resolved and unresolved frontend-to-API callsites,
+- unresolved callsite rate,
+- top unresolved pattern categories,
+- suggested override snippets when ReleaseGuard can infer a likely mapping.
+
+Unsupported repositories do not crash the command. They produce an
+`unsupported_framework` report so scanner coverage gaps remain visible.
+
 ## Day 1 demo app
 
 The v0.1 demo app lives in `apps/demo-app`.

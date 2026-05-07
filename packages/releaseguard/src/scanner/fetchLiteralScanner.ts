@@ -11,6 +11,7 @@ import { ApiScanResult } from "./nextApiScanner";
 import { RouteScanResult } from "./nextRouteScanner";
 import { lineForIndex, lineQuote, pathExists } from "./fileUtils";
 import { ScannerCoverage, UnresolvedCallsite } from "./types";
+import { classifyUnresolvedPattern } from "./unresolvedPatternClassifier";
 
 type FetchLiteralMatch = {
   url: string;
@@ -46,13 +47,17 @@ export async function scanFetchLiterals(
       for (const match of resolved) {
         const api = apiByTarget.get(`${match.method} ${match.url}`);
         if (!api) {
-          coverage.unresolvedCallsites.push({
-            filePath: relativePath,
-            line: lineForIndex(source, match.index),
-            reason: `No scanned API matched ${match.method} ${match.url}.`,
-            quote: lineQuote(source, lineForIndex(source, match.index)),
-            confidence: "unresolved",
-          });
+        const unresolved: UnresolvedCallsite = {
+          filePath: relativePath,
+          line: lineForIndex(source, match.index),
+          reason: `No scanned API matched ${match.method} ${match.url}.`,
+          quote: lineQuote(source, lineForIndex(source, match.index)),
+          confidence: "unresolved",
+        };
+        coverage.unresolvedCallsites.push({
+          ...unresolved,
+          pattern: classifyUnresolvedPattern(unresolved),
+        });
           continue;
         }
 
@@ -130,13 +135,17 @@ export function findUnsupportedFetches(
     if (/^["']\/api\/[^"']+["']$/.test(firstArg)) {
       continue;
     }
-    unresolved.push({
+    const callsite: UnresolvedCallsite = {
       filePath,
       line: lineForIndex(source, match.index),
       reason:
         "Unsupported fetch call in v0.1. Only direct string literals like fetch(\"/api/...\") are resolved.",
       quote: lineQuote(source, lineForIndex(source, match.index)),
       confidence: "unresolved",
+    };
+    unresolved.push({
+      ...callsite,
+      pattern: classifyUnresolvedPattern(callsite),
     });
   }
   return unresolved;
@@ -196,4 +205,3 @@ async function resolveLocalImport(
   }
   return undefined;
 }
-

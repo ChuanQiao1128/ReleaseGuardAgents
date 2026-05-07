@@ -7,6 +7,7 @@ import { writeRepoMemoryIndex } from "./memory/memoryIndex";
 import { runRagBenchmark } from "./memory/benchmark";
 import { writeRagDemoDiscountContext } from "./memory/demoDiscountContext";
 import { guardedRetrieveWithRrf } from "./memory/guardedRetriever";
+import { runScannerEval } from "./scanner/scannerEval";
 
 export type CliArgs =
   | {
@@ -20,6 +21,11 @@ export type CliArgs =
       command: "memory";
       action: "index" | "benchmark" | "demo-discount-context" | "search";
       query?: string;
+    }
+  | {
+      command: "scanner";
+      action: "eval";
+      root: string;
     }
   | { command: "help" };
 
@@ -64,6 +70,26 @@ export function parseCliArgs(argv: string[]): CliArgs {
       query,
     };
   }
+  if (command === "scanner") {
+    const [action, ...extra] = rest;
+    if (action !== "eval") {
+      throw new Error("scanner requires action: eval.");
+    }
+    let root: string | undefined;
+    for (let index = 0; index < extra.length; index += 1) {
+      const arg = extra[index];
+      if (arg === "--root") {
+        root = requireValue(extra, index, "--root");
+        index += 1;
+      } else {
+        throw new Error(`Unknown argument: ${arg}`);
+      }
+    }
+    if (!root) {
+      throw new Error("scanner eval requires --root.");
+    }
+    return { command: "scanner", action, root };
+  }
 
   if (command !== "run") {
     throw new Error(`Unknown command: ${command}`);
@@ -105,6 +131,22 @@ export async function runCli(argv = process.argv.slice(2)): Promise<void> {
   }
 
   const rootDir = resolveRootDir();
+  if (args.command === "scanner") {
+    const result = await runScannerEval({
+      workspaceRoot: rootDir,
+      repoRoot: resolveUserPath(args.root),
+    });
+    console.log(`Scanner eval repo: ${result.repo_path}`);
+    console.log(`Framework detected: ${result.framework_detected}`);
+    console.log(`Supported: ${result.supported ? "yes" : "no"}`);
+    console.log(`Routes detected: ${result.routes_detected}`);
+    console.log(`APIs detected: ${result.apis_detected}`);
+    console.log(`Resolved callsites: ${result.resolved_callsites}`);
+    console.log(`Unresolved callsites: ${result.unresolved_callsites}`);
+    console.log(`Unresolved rate: ${(result.unresolved_rate * 100).toFixed(1)}%`);
+    console.log(`Report: ${relativePath(rootDir, result.report_path)}`);
+    return;
+  }
   if (args.command === "memory") {
     if (args.action === "index") {
       const result = await writeRepoMemoryIndex(rootDir);
@@ -192,6 +234,10 @@ function resolveRootDir(): string {
   }
 }
 
+function resolveUserPath(userPath: string): string {
+  return path.resolve(process.env.INIT_CWD ?? process.cwd(), userPath);
+}
+
 function requireValue(args: string[], index: number, flag: string): string {
   const value = args[index + 1];
   if (!value || value.startsWith("--")) {
@@ -235,6 +281,7 @@ function usage(): string {
     "  releaseguard memory benchmark",
     "  releaseguard memory demo-discount-context",
     '  releaseguard memory search --query "discount checkout crash"',
+    "  releaseguard scanner eval --root <repo_path>",
   ].join("\n");
 }
 
