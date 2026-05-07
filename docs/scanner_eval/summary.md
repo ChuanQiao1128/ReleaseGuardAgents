@@ -16,6 +16,14 @@ unsupported marker.
 | `vercel/nextgram` | `nextjs_app_router_typescript` | yes | 3 | 0 | 0 | 0 | 0.0% | none |
 | `tiangolo/full-stack-fastapi-template` | `unsupported_framework` | no | 0 | 0 | 0 | 1 | 100.0% | `unsupported_framework` |
 
+## Universal Impact Snapshot
+
+| Repo | File roles detected | Module nodes | Package nodes | Universal fallback nodes | Framework capability nodes |
+|---|---:|---:|---:|---:|---:|
+| `leerob/next-saas-starter` | yes | 4 | 1 | 60 | 12 |
+| `vercel/nextgram` | yes | 2 | 1 | 16 | 3 |
+| `tiangolo/full-stack-fastapi-template` | yes | 9 | 4 | 246 | 0 |
+
 ## Resolution Level Snapshot
 
 | Repo | L0 File | L1 Module/Package | L3 Framework | L4 Test | L5 Declared |
@@ -62,10 +70,16 @@ Reports:
 v0.4 has addressed the highest-ROI issue from the first supported real app:
 simple local fetcher/SWR route-to-API dependency resolution.
 
-Next, ReleaseGuard can pilot a browser smoke runner for supported Next.js repos,
-but scanner eval should stay mandatory before enforcement. If future real repos
-show unresolved rates above `20%`, scanner expansion and override UX should
-again take priority over browser execution.
+v0.5 changed unsupported repo behavior from a binary unsupported marker to a
+file/module/package impact report. The FastAPI template still has no route/API
+precision, but it now exposes 111 source files, 30 test files, 9 module nodes,
+and 4 package nodes that can support fail-safe impact reporting.
+
+The next milestone should prioritize coverage ingestion before Playwright.
+Coverage is more language-agnostic than browser execution and can answer
+whether tests touched changed files even when route/API adapters are missing.
+Playwright should remain scoped to supported Next.js repos after scanner eval
+shows route/API mapping is explainable.
 
 ## Top Scanner Improvements By Expected ROI
 
@@ -77,7 +91,6 @@ again take priority over browser execution.
 
 ## Next Milestone Decision
 
-v0.4 scanner expansion is sufficient for the current small real-repo pack. The
-next implementation can be a narrow Playwright/browser smoke pilot for supported
-Next.js repos, guarded by scanner eval and without replacing the deterministic
-Evidence Planner or Decision Engine.
+Use v0.6 for coverage ingestion providers such as LCOV and Cobertura. Defer a
+Playwright/browser smoke pilot until scanner eval plus coverage can explain
+which route/API or file/module impact needs browser evidence.

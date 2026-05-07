@@ -18,7 +18,13 @@ describe("scanner eval", () => {
     const report = await fs.readFile(result.report_path, "utf8");
     const unresolved = JSON.parse(
       await fs.readFile(result.unresolved_report_path, "utf8"),
-    ) as { unresolved_callsite_rate: number };
+    ) as {
+      unresolved_callsite_rate: number;
+      adapter_contribution: {
+        universal_fallback_nodes: number;
+        framework_capability_nodes: number;
+      };
+    };
 
     expect(result.supported).toBe(true);
     expect(result.routes_detected).toBeGreaterThanOrEqual(1);
@@ -29,7 +35,13 @@ describe("scanner eval", () => {
     expect(report).toContain("ReleaseGuard Scanner Eval");
     expect(report).toContain("Detected routes");
     expect(report).toContain("Detected frontend->API callsites");
+    expect(report).toContain("Resolution level distribution");
+    expect(report).toContain("Adapter contribution");
+    expect(report).toContain("Fail-safe implication");
     expect(unresolved.unresolved_callsite_rate).toBe(result.unresolved_rate);
+    expect(unresolved.adapter_contribution.framework_capability_nodes).toBeGreaterThanOrEqual(
+      2,
+    );
   });
 
   it("writes unsupported framework reports instead of crashing", async () => {
@@ -50,6 +62,12 @@ describe("scanner eval", () => {
     });
     expect(report).toContain("Supported by current scanner: no");
     expect(report).toContain("unsupported_framework");
+    expect(report).toContain("Universal fallback nodes");
+    expect(report).toContain("Route/API precision is unavailable");
+    expect(result.universal_fallback_nodes).toBeGreaterThan(0);
+    expect(result.resolution_level_distribution.L0_CHANGED_FILE_ONLY).toBeGreaterThan(
+      0,
+    );
   });
 
   it("classifies unresolved callsite patterns", () => {

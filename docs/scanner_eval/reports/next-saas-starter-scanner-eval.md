@@ -17,6 +17,8 @@ Snapshot commit: `6e33e58`
 | Resolved callsites | 4 |
 | Unresolved callsites | 0 |
 | Unresolved rate | 0.0% |
+| Detected module nodes | 4 |
+| Detected package nodes | 1 |
 
 ## File Role Counts
 
@@ -34,6 +36,20 @@ Snapshot commit: `6e33e58`
 - `L3_FRAMEWORK_CAPABILITY_MAPPED`: 12
 - `L4_TEST_EVIDENCE_MAPPED`: 0
 - `L5_DECLARED_CAPABILITY_MAPPED`: 0
+
+## Adapter Contribution
+
+- Universal fallback nodes: 60
+- Framework capability nodes: 12
+- Test evidence nodes: 0
+- Universal fallback contribution: file/module/package impact context.
+- Framework adapter contribution: Next.js route/API precision.
+
+## Fail-safe Implication
+
+- Supported framework adapter ran without unresolved frontend-to-API callsites.
+- Enforcement should still depend on changed-file impact and selected evidence
+  results, not scanner support alone.
 
 ## Detected Routes
 

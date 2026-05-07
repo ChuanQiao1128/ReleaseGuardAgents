@@ -24,6 +24,10 @@ export type ScannerEvalResult = {
   unresolved_callsites: number;
   unresolved_rate: number;
   scanner_error_count: number;
+  module_nodes_detected: number;
+  package_nodes_detected: number;
+  universal_fallback_nodes: number;
+  framework_capability_nodes: number;
   top_unresolved_patterns: Array<{
     pattern: UnresolvedPatternCategory;
     count: number;
@@ -100,6 +104,7 @@ export async function runScannerEval(args: {
   }
 
   const unresolvedReportPath = path.join(outputDir, "unresolved_report.json");
+  const contribution = graphContribution(graph);
   await fs.writeFile(
     unresolvedReportPath,
     `${JSON.stringify({
@@ -110,6 +115,7 @@ export async function runScannerEval(args: {
       top_unresolved_patterns: patternCounts,
       file_role_counts: coverage.fileRoleCounts ?? {},
       resolution_level_distribution: normalizedResolutionCounts(coverage),
+      adapter_contribution: contribution,
       unresolved_callsites: unresolvedCallsites,
       suggested_overrides: suggestions,
     }, null, 2)}\n`,
@@ -132,6 +138,10 @@ export async function runScannerEval(args: {
     unresolved_callsites: unresolvedCallsites.length,
     unresolved_rate: unresolvedRate(coverage),
     scanner_error_count: scannerError ? 1 : 0,
+    module_nodes_detected: contribution.module_nodes,
+    package_nodes_detected: contribution.package_nodes,
+    universal_fallback_nodes: contribution.universal_fallback_nodes,
+    framework_capability_nodes: contribution.framework_capability_nodes,
     top_unresolved_patterns: patternCounts,
     file_role_counts: coverage.fileRoleCounts ?? {},
     resolution_level_distribution: normalizedResolutionCounts(coverage),
@@ -178,6 +188,8 @@ function renderScannerEvalMarkdown(args: {
     `- Resolved callsites: ${args.result.resolved_callsites}`,
     `- Unresolved callsites: ${args.result.unresolved_callsites}`,
     `- Unresolved rate: ${formatPercent(args.result.unresolved_rate)}`,
+    `- Detected module nodes: ${args.result.module_nodes_detected}`,
+    `- Detected package nodes: ${args.result.package_nodes_detected}`,
     "",
     "## File role counts",
     ...listOrNone(
@@ -190,6 +202,16 @@ function renderScannerEvalMarkdown(args: {
     ...Object.entries(args.result.resolution_level_distribution).map(
       ([level, count]) => `- ${level}: ${count}`,
     ),
+    "",
+    "## Adapter contribution",
+    `- Universal fallback nodes: ${args.result.universal_fallback_nodes}`,
+    `- Framework capability nodes: ${args.result.framework_capability_nodes}`,
+    `- Test evidence nodes: ${args.result.tests_detected}`,
+    `- Universal fallback contribution: file/module/package impact context for every scanned repo.`,
+    `- Framework adapter contribution: route/API precision when the repository matches a supported adapter.`,
+    "",
+    "## Fail-safe implication",
+    ...failSafeImplicationLines(args.result),
     "",
     "## Detected routes",
     ...listOrNone(
@@ -237,6 +259,48 @@ function renderScannerEvalMarkdown(args: {
     `- Unresolved report: ${args.result.unresolved_report_path}`,
     "",
   ].join("\n");
+}
+
+function graphContribution(graph: CapabilityGraph | undefined): {
+  file_nodes: number;
+  module_nodes: number;
+  package_nodes: number;
+  universal_fallback_nodes: number;
+  framework_capability_nodes: number;
+} {
+  const nodes = Object.values(graph?.nodes ?? {});
+  const file_nodes = nodes.filter((node) => node.type === "file").length;
+  const module_nodes = nodes.filter((node) => node.type === "module").length;
+  const package_nodes = nodes.filter((node) => node.type === "package").length;
+  const framework_capability_nodes = nodes.filter(
+    (node) => node.type === "route" || node.type === "api",
+  ).length;
+  return {
+    file_nodes,
+    module_nodes,
+    package_nodes,
+    universal_fallback_nodes: file_nodes + module_nodes + package_nodes,
+    framework_capability_nodes,
+  };
+}
+
+function failSafeImplicationLines(result: ScannerEvalResult): string[] {
+  if (!result.supported) {
+    return [
+      "- Route/API precision is unavailable for this repository.",
+      "- Source, config, or dependency changes should be treated as fail-safe WARN unless coverage, declarations, contracts, or a framework adapter provide stronger evidence.",
+    ];
+  }
+  if (result.unresolved_callsites > 0) {
+    return [
+      "- Supported framework adapter ran, but unresolved callsites remain.",
+      "- Changes touching unresolved areas should stay WARN until an override, declaration, or scanner improvement proves the mapping.",
+    ];
+  }
+  return [
+    "- Supported framework adapter ran without unresolved frontend-to-API callsites in this scanner eval.",
+    "- Enforcement should still depend on changed-file impact and selected evidence results, not scanner support alone.",
+  ];
 }
 
 function unresolvedPatternCounts(unresolved: UnresolvedCallsite[]): Array<{

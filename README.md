@@ -363,6 +363,12 @@ dependency changes do not silently pass; they fail safe with `WARN` unless a
 more precise adapter, coverage source, declaration, or override can prove the
 impact.
 
+v0.5.1 refreshes scanner eval reporting around those impact levels. Reports now
+show universal fallback contribution, framework adapter contribution, and
+fail-safe implications. This keeps the product claim honest: ReleaseGuard does
+not automatically understand every framework, but every repo can get a
+minimum safe impact report.
+
 ## Day 1 demo app
 
 The v0.1 demo app lives in `apps/demo-app`.

@@ -17,6 +17,8 @@ Snapshot commit: `e74b346`
 | Resolved callsites | 0 |
 | Unresolved callsites | 0 |
 | Unresolved rate | 0.0% |
+| Detected module nodes | 2 |
+| Detected package nodes | 1 |
 
 ## File Role Counts
 
@@ -33,6 +35,20 @@ Snapshot commit: `e74b346`
 - `L3_FRAMEWORK_CAPABILITY_MAPPED`: 3
 - `L4_TEST_EVIDENCE_MAPPED`: 0
 - `L5_DECLARED_CAPABILITY_MAPPED`: 0
+
+## Adapter Contribution
+
+- Universal fallback nodes: 16
+- Framework capability nodes: 3
+- Test evidence nodes: 0
+- Universal fallback contribution: file/module/package impact context.
+- Framework adapter contribution: Next.js route precision.
+
+## Fail-safe Implication
+
+- Supported framework adapter ran without unresolved frontend-to-API callsites.
+- This repo is still route-only for scanner eval, so it does not exercise API
+  dependency coverage.
 
 ## Detected Routes
 

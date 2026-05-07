@@ -17,6 +17,8 @@ Snapshot commit: `13652b5`
 | Resolved callsites | 0 |
 | Unresolved callsites | 1 |
 | Unresolved rate | 100.0% |
+| Detected module nodes | 9 |
+| Detected package nodes | 4 |
 
 ## File Role Counts
 
@@ -34,6 +36,22 @@ Snapshot commit: `13652b5`
 - `L3_FRAMEWORK_CAPABILITY_MAPPED`: 0
 - `L4_TEST_EVIDENCE_MAPPED`: 0
 - `L5_DECLARED_CAPABILITY_MAPPED`: 0
+
+## Adapter Contribution
+
+- Universal fallback nodes: 246
+- Framework capability nodes: 0
+- Test evidence nodes: 0
+- Universal fallback contribution: file/module/package impact context.
+- Framework adapter contribution: none; FastAPI route/API adapter is not
+  implemented.
+
+## Fail-safe Implication
+
+- Route/API precision is unavailable for this repository.
+- Source, config, or dependency changes should be treated as fail-safe `WARN`
+  unless coverage, declarations, contracts, or a framework adapter provide
+  stronger evidence.
 
 ## Detected Routes
 
