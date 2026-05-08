@@ -58,8 +58,8 @@ Sample reports for `BLOCK`, `WARN`, and `PASS` cases are committed under [docs/s
 ReleaseGuard ships as a Node CLI today. Until the npm release lands, use the repo directly:
 
 ```bash
-git clone https://github.com/ChuanQiao1128/ReleaseGuardAgents
-cd ReleaseGuardAgents
+git clone https://github.com/ChuanQiao1128/ReleaseGuard
+cd ReleaseGuard
 npm install
 npm run build --workspace releaseguard
 

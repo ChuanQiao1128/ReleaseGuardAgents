@@ -15,7 +15,14 @@ const IGNORED_DIR_NAMES = new Set([
 ]);
 
 const SOURCE_ROOTS = ["docs", ".releaseguard/reports"];
-const IGNORED_MARKDOWN_FILE_NAMES = new Set(["external_quickstart.md"]);
+const IGNORED_MARKDOWN_FILE_NAMES = new Set([
+  "external_quickstart.md",
+  // VERSIONS.md is the long-form release narrative for ReleaseGuard itself.
+  // It would dominate BM25 with its own jargon (discount, checkout, ADR,
+  // incident) without ever being a source of historical context about the
+  // *user's* repo, so it must not enter the memory corpus.
+  "VERSIONS.md",
+]);
 
 export async function loadRepoMemoryChunks(
   rootDir: string,

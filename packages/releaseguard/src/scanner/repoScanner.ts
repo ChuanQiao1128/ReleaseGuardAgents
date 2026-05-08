@@ -12,6 +12,8 @@ import { scanTests } from "./testScanner";
 import { ScannerCoverage, ScannerResult } from "./types";
 import { scanPackageManifests } from "./packageManifestScanner";
 import { scanUniversalFiles } from "./universalFileScanner";
+import { scanViteReactRouterRoutes } from "./viteReactRouterRouteScanner";
+import { scanAxiosCallsites } from "./axiosCallsiteScanner";
 
 export async function scanRepository(rootDir: string): Promise<{
   graph: CapabilityGraph;
@@ -45,40 +47,43 @@ export async function scanRepository(rootDir: string): Promise<{
   await scanUniversalFiles(rootDir, graph, coverage);
   await scanPackageManifests(rootDir, graph, coverage);
 
-  if (!framework.isNextAppRouter || !framework.isTypeScript) {
+  if (framework.kind === "nextjs_app_router" && framework.isTypeScript) {
+    const scanned = await listFiles(framework.appRoot, (filePath) =>
+      /\.(ts|tsx)$/.test(filePath),
+    );
+    coverage.scannedFiles = [
+      ...new Set([
+        ...coverage.scannedFiles,
+        ...scanned.map((filePath) => toRepoRelativePath(rootDir, filePath)),
+      ]),
+    ].sort();
+
+    const routes = await scanNextRoutes(rootDir, framework.appDir, graph, coverage);
+    const apis = await scanNextApis(rootDir, framework.appDir, graph, coverage);
+    await scanFetchLiterals(rootDir, graph, routes, apis, coverage);
+    await scanTests(rootDir, framework.appRoot, graph);
+  } else if (framework.kind === "vite_react_router") {
+    const scanned = await listFiles(framework.appRoot, (filePath) =>
+      /\.(ts|tsx|js|jsx)$/.test(filePath),
+    );
+    coverage.scannedFiles = [
+      ...new Set([
+        ...coverage.scannedFiles,
+        ...scanned.map((filePath) => toRepoRelativePath(rootDir, filePath)),
+      ]),
+    ].sort();
+
+    await scanViteReactRouterRoutes(rootDir, framework.appRoot, graph, coverage);
+    await scanAxiosCallsites(rootDir, framework.appRoot, graph, coverage);
+    await scanTests(rootDir, framework.appRoot, graph);
+    coverage.limitations.push(
+      "Vite + React Router adapter v1 resolves JSX <Route>, createBrowserRouter / useRoutes object routes, and axios calls with literal URLs. Path nesting, route grouping, dynamic clients, and non-literal URLs are unresolved.",
+    );
+  } else {
     coverage.limitations.push(
       "Framework-specific route/API scanner did not run; universal file/module/package fallback is the current precision level.",
     );
-    updateConfidenceBreakdown(graph, coverage);
-    const { graphPath, coveragePath } = await writeScannerArtifacts(
-      rootDir,
-      graph,
-      coverage,
-    );
-    return {
-      graph,
-      result: {
-        graphPath,
-        coveragePath,
-        coverage,
-      },
-    };
   }
-
-  const scanned = await listFiles(framework.appRoot, (filePath) =>
-    /\.(ts|tsx)$/.test(filePath),
-  );
-  coverage.scannedFiles = [
-    ...new Set([
-      ...coverage.scannedFiles,
-      ...scanned.map((filePath) => toRepoRelativePath(rootDir, filePath)),
-    ]),
-  ].sort();
-
-  const routes = await scanNextRoutes(rootDir, framework.appDir, graph, coverage);
-  const apis = await scanNextApis(rootDir, framework.appDir, graph, coverage);
-  await scanFetchLiterals(rootDir, graph, routes, apis, coverage);
-  await scanTests(rootDir, framework.appRoot, graph);
 
   updateConfidenceBreakdown(graph, coverage);
 

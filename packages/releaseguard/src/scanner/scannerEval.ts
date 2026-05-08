@@ -60,9 +60,12 @@ export async function runScannerEval(args: {
   await fs.mkdir(outputDir, { recursive: true });
 
   const framework = await detectFramework(repoRoot);
-  const frameworkDetected = framework.isNextAppRouter
-    ? `nextjs_app_router${framework.isTypeScript ? "_typescript" : ""}`
-    : "unsupported_framework";
+  const frameworkDetected =
+    framework.kind === "nextjs_app_router"
+      ? `nextjs_app_router${framework.isTypeScript ? "_typescript" : ""}`
+      : framework.kind === "vite_react_router"
+        ? `vite_react_router${framework.isTypeScript ? "_typescript" : ""}`
+        : "unsupported_framework";
 
   let coverage = emptyCoverage();
   let graph: CapabilityGraph | undefined;
@@ -79,7 +82,7 @@ export async function runScannerEval(args: {
       ),
     };
     graph = scan.graph;
-    if (!framework.isNextAppRouter || !framework.isTypeScript) {
+    if (framework.kind === "unsupported") {
       scannerError = "unsupported framework route/API adapter";
     }
   } catch (error) {
@@ -98,7 +101,7 @@ export async function runScannerEval(args: {
   }
 
   if (
-    (!framework.isNextAppRouter || !framework.isTypeScript) &&
+    framework.kind === "unsupported" &&
     coverage.unresolvedCallsites.length === 0
   ) {
     coverage.unresolvedCallsites.push({
@@ -161,7 +164,11 @@ export async function runScannerEval(args: {
   const result: ScannerEvalResult = {
     repo_path: repoRoot,
     framework_detected: frameworkDetected,
-    supported: framework.isNextAppRouter && framework.isTypeScript && !scannerError,
+    supported:
+      (framework.kind === "nextjs_app_router" && framework.isTypeScript) ||
+      framework.kind === "vite_react_router"
+        ? !scannerError
+        : false,
     scanned_file_count: coverage.scannedFiles.length,
     routes_detected: coverage.detectedRoutes.length,
     apis_detected: coverage.detectedApis.length,

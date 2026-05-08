@@ -11,3 +11,9 @@ coverage/
 !.env.example
 artifacts/releaseguard/
 .releaseguard/
+# Build artifacts (npm pack output)
+packages/releaseguard/*.tgz
+
+# macOS metadata
+.DS_Store
+**/.DS_Store
